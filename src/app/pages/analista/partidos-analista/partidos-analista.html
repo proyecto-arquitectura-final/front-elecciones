@@ -1,0 +1,50 @@
+<div class="page-header">
+  <div>
+    <h1>Gestión de Partidos Políticos</h1>
+    <p>Administrar partidos y movimientos políticos registrados</p>
+  </div>
+  <button class="btn-primary-green">+ Nuevo Partido</button>
+</div>
+
+<div class="stats-grid">
+  <div class="stat-card" *ngFor="let s of stats">
+    <div class="stat-label">{{ s.label }}</div>
+    <div class="stat-value">{{ s.value }}</div>
+    <div class="stat-sub">{{ s.sub }}</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h3>Partidos Registrados ({{ partidos.length }})</h3>
+    <div class="search-box">
+      <span>🔍</span>
+      <input type="text" placeholder="Buscar partido..." [(ngModel)]="busqueda" />
+    </div>
+  </div>
+  <table class="analista-table">
+    <thead>
+      <tr>
+        <th>Partido</th><th>Sigla</th><th>Color</th><th>Fundación</th>
+        <th>Candidatos</th><th>Estado</th><th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let p of partidosFiltrados">
+        <td class="td-partido"><span>⚑</span> {{ p.nombre }}</td>
+        <td class="td-sigla">{{ p.sigla }}</td>
+        <td class="td-color">
+          <div class="color-dot" [style.background]="p.color"></div>
+          <span>{{ p.color }}</span>
+        </td>
+        <td>{{ p.fundacion }}</td>
+        <td><span class="badge-cand">{{ p.candidatos }} candidatos</span></td>
+        <td><span class="badge-activo">Activo</span></td>
+        <td class="td-actions">
+          <button class="icon-btn edit">✏</button>
+          <button class="icon-btn del">🗑</button>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>

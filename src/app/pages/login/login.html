@@ -1,0 +1,66 @@
+<div class="login-container">
+
+  <div class="brand">
+    <div class="icon">✓</div>
+    <h1>Elecciones Colombia 2026</h1>
+    <p>Sistema de Gestión Electoral</p>
+  </div>
+
+  <div class="login-card">
+
+    <h2>Iniciar Sesión</h2>
+    <p class="subtitle">Selecciona una cuenta demo o ingresa tus credenciales</p>
+
+    <!-- ACCESO RÁPIDO DEMO -->
+    <div class="demo-section">
+      <div class="demo-label">ACCESO RÁPIDO DEMO</div>
+      <div class="demo-grid">
+        <button class="demo-card" [class.active]="rolSeleccionado === 'admin'" (click)="seleccionarRol('admin')">
+          <div class="demo-icon blue">🛡</div>
+          <div class="demo-title">Administrador</div>
+          <div class="demo-sub">Acceso total al sistema</div>
+        </button>
+        <button class="demo-card" [class.active]="rolSeleccionado === 'analista'" (click)="seleccionarRol('analista')">
+          <div class="demo-icon green">📊</div>
+          <div class="demo-title">Analista Electoral</div>
+          <div class="demo-sub">Análisis de datos y reportes</div>
+          <span class="demo-arrow" *ngIf="rolSeleccionado === 'analista'">›</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="divider"><span>o ingresa manualmente</span></div>
+
+    <div class="alert-error" *ngIf="error">
+      {{ mensajeError }}
+    </div>
+
+    <div class="input-group">
+      <label>Correo Electrónico</label>
+      <div class="input-wrap">
+        <span class="input-icon">✉</span>
+        <input type="email" [(ngModel)]="correo" placeholder="correo@ejemplo.com" (keyup.enter)="ingresar()" />
+      </div>
+    </div>
+
+    <div class="input-group">
+      <label>Contraseña</label>
+      <div class="input-wrap">
+        <span class="input-icon">🔒</span>
+        <input type="password" [(ngModel)]="contrasena" placeholder="••••••••" (keyup.enter)="ingresar()" />
+      </div>
+    </div>
+
+    <button class="btn-ingresar" (click)="ingresar()" [disabled]="cargando">
+      {{ cargando ? 'Ingresando...' : 'Ingresar al Sistema' }}
+    </button>
+
+    <div class="footer-text">
+      Sistema protegido · Autenticación de dos factores habilitada (FR-01)
+    </div>
+
+  </div>
+
+  <a routerLink="/" class="back-link">← Volver al Dashboard Público</a>
+
+</div>

@@ -1,0 +1,89 @@
+<div class="page-header">
+  <div>
+    <h1>Gestión de Candidatos</h1>
+    <p>Administración de candidatos registrados (FR-04)</p>
+  </div>
+  <button class="btn-primary-green">+ Nuevo Candidato</button>
+</div>
+
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="stat-top">
+      <div><div class="stat-label">Total Candidatos</div><div class="stat-value">8</div></div>
+      <div class="stat-icon icon-green">👥</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-top">
+      <div><div class="stat-label">Presidencia</div><div class="stat-value">4</div></div>
+      <span class="badge-nivel nacional">Nacional</span>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-top">
+      <div><div class="stat-label">Senado</div><div class="stat-value">2</div></div>
+      <span class="badge-nivel nacional">Nacional</span>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-top">
+      <div><div class="stat-label">Cámara</div><div class="stat-value">2</div></div>
+      <span class="badge-nivel regional">📍</span>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="filters-row">
+    <div class="search-box">
+      <span>🔍</span>
+      <input type="text" placeholder="Buscar por nombre o partido..." [(ngModel)]="busqueda" />
+    </div>
+    <select [(ngModel)]="filtroTipo">
+      <option value="">Todos los tipos</option>
+      <option value="Presidencia">Presidencia</option>
+      <option value="Senado">Senado</option>
+      <option value="Cámara">Cámara</option>
+    </select>
+  </div>
+
+  <div class="table-title">Lista de Candidatos ({{ candidatosFiltrados.length }})</div>
+  <table class="analista-table">
+    <thead>
+      <tr>
+        <th>ID</th><th>Nombre</th><th>Partido</th><th>Tipo de Elección</th>
+        <th>Territorio</th><th>Votos Actuales</th><th>Estado</th><th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let c of candidatosFiltrados">
+        <td class="td-id">{{ c.id }}</td>
+        <td class="td-bold">{{ c.nombre }}</td>
+        <td><span class="tag-partido" [ngClass]="c.partidoClass">{{ c.partido }}</span></td>
+        <td><span class="tag-tipo" [ngClass]="c.tipoClass">{{ c.tipo }}</span></td>
+        <td>{{ c.territorio }}</td>
+        <td class="td-bold">{{ c.votos | number }}</td>
+        <td><span class="badge-activo">Activo</span></td>
+        <td class="td-actions">
+          <button class="icon-btn edit">✏</button>
+          <button class="icon-btn del">🗑</button>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="card">
+  <h3>Distribución por Partido Político</h3>
+  <div class="dist-list">
+    <div class="dist-item" *ngFor="let p of distribucion">
+      <div class="dist-header">
+        <span class="dist-nombre">{{ p.partido }}</span>
+        <span class="dist-count">{{ p.count }} candidatos</span>
+      </div>
+      <div class="dist-bar-track">
+        <div class="dist-bar-fill" [style.width]="(p.count / 8 * 100) + '%'"></div>
+      </div>
+    </div>
+  </div>
+</div>

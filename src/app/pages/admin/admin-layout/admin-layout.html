@@ -1,0 +1,58 @@
+<div class="admin-wrapper">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">✓</div>
+      <div>
+        <div class="brand-title">Admin Panel</div>
+        <div class="brand-sub">Elecciones 2026</div>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a routerLink="/admin/dashboard" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">⊞</span> Dashboard
+      </a>
+      <a routerLink="/admin/partidos" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">⚑</span> Partidos
+      </a>
+      <a routerLink="/admin/candidatos" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">👤</span> Candidatos
+      </a>
+      <a routerLink="/admin/elecciones" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">🗳</span> Elecciones
+      </a>
+      <a routerLink="/admin/encuestas" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">📋</span> Encuestas
+      </a>
+      <a routerLink="/admin/resultados" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">📈</span> Resultados
+      </a>
+      <a routerLink="/admin/reportes" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">📄</span> Reportes
+      </a>
+      <a routerLink="/admin/usuarios" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">👥</span> Usuarios
+      </a>
+      <a routerLink="/admin/auditoria" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">📊</span> Auditoría
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <a routerLink="/admin/configuracion" class="nav-item">
+        <span class="nav-icon">⚙</span> Configuración
+      </a>
+      <a class="nav-item logout" (click)="logout()">
+        <span class="nav-icon">→</span> Cerrar Sesión
+      </a>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="admin-main">
+    <router-outlet />
+  </main>
+
+</div>

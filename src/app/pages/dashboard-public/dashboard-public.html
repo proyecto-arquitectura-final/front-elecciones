@@ -1,0 +1,457 @@
+<!-- NAVBAR -->
+<nav class="navbar">
+  <div class="nav-brand">
+    <div class="nav-icon">✓</div>
+    <div class="nav-brand-text">
+      <span class="nav-title">Elecciones Colombia 2026</span>
+      <span class="nav-subtitle">Sistema de Monitoreo Electoral</span>
+    </div>
+  </div>
+  <div class="nav-links">
+    <button class="nav-link" [class.active]="vistaActiva === 'resultados'" (click)="setVista('resultados')">
+      <span class="nav-link-icon">📊</span> Resultados
+    </button>
+    <button class="nav-link" [class.active]="vistaActiva === 'predicciones'" (click)="setVista('predicciones')">
+      <span class="nav-link-icon">📈</span> Predicciones
+    </button>
+    <button class="nav-link" [class.active]="vistaActiva === 'asistente'" (click)="setVista('asistente')">
+      <span class="nav-link-icon">💬</span> Asistente
+    </button>
+    <a routerLink="/login" class="btn-admin">
+      <span>👤</span> Acceso Admin
+    </a>
+  </div>
+</nav>
+
+<!-- ===================== VISTA: RESULTADOS ===================== -->
+<main class="main-content" *ngIf="vistaActiva === 'resultados'">
+
+  <div class="page-header">
+    <h1>Resultados en Vivo - Primera Vuelta</h1>
+    <p>Elecciones Presidenciales Colombia 2026 • 23 de Marzo, 2026</p>
+  </div>
+
+  <div class="card filters-card">
+    <div class="filter-group">
+      <label>Tipo de Elección</label>
+      <select [(ngModel)]="tipoEleccion">
+        <option value="presidencia">Presidencia</option>
+        <option value="senado">Senado</option>
+        <option value="camara">Cámara de Representantes</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Nivel Territorial</label>
+      <select [(ngModel)]="nivelTerritorial">
+        <option value="nacional">Nacional</option>
+        <option value="departamento">Departamento</option>
+        <option value="municipio">Municipio</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-header">
+        <span class="stat-label">Votos Procesados</span>
+        <span class="badge-live">▲ En vivo</span>
+      </div>
+      <div class="stat-value">91.2%</div>
+      <div class="progress-bar"><div class="progress-fill" style="width: 91.2%"></div></div>
+      <div class="stat-sub">10,085,430 de 11,050,000 votos</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-header">
+        <span class="stat-label">Participación</span>
+        <span class="stat-icon stat-icon--blue">👥</span>
+      </div>
+      <div class="stat-value">67.8%</div>
+      <div class="progress-bar"><div class="progress-fill blue" style="width: 67.8%"></div></div>
+      <div class="stat-sub">27,625,000 votantes habilitados</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-header">
+        <span class="stat-label">Mesas Informadas</span>
+        <span class="stat-icon stat-icon--purple">📋</span>
+      </div>
+      <div class="stat-value">88,245</div>
+      <div class="progress-bar"><div class="progress-fill purple" style="width: 89.5%"></div></div>
+      <div class="stat-sub">98,600 mesas totales</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-header">
+        <span class="stat-label">Departamentos</span>
+        <span class="stat-icon stat-icon--pink">📍</span>
+      </div>
+      <div class="stat-value">32/32</div>
+      <div class="progress-bar"><div class="progress-fill pink" style="width: 100%"></div></div>
+      <div class="stat-sub">Todas las regiones reportando</div>
+    </div>
+  </div>
+
+  <div class="alert-warning">
+    <span class="alert-icon">ℹ️</span>
+    <div>
+      <strong>Importante:</strong>
+      Las predicciones mostradas son proyecciones estadísticas y NO representan resultados oficiales.
+      Los resultados oficiales serán publicados por la Registraduría Nacional.
+    </div>
+  </div>
+
+  <div class="card winner-card">
+    <div class="winner-header">
+      <div>
+        <h3>Proyección Actual del Ganador</h3>
+        <p class="winner-sub">Basado en 91.2% de votos procesados</p>
+      </div>
+      <div class="winner-check">✔</div>
+    </div>
+    <div class="winner-name">María Fernández</div>
+    <div class="winner-party">Partido Liberal Colombia</div>
+    <div class="winner-footer">
+      <span class="badge-pct blue">38.5%</span>
+      <span class="winner-votes">4,250,000 votos</span>
+      <div class="winner-confidence">
+        <span class="conf-label">Nivel de Confianza</span>
+        <span class="conf-value">94.2%</span>
+        <div class="progress-bar"><div class="progress-fill" style="width: 94.2%"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="two-col-grid">
+    <div class="card">
+      <h3 class="section-title">Resultados por Candidato</h3>
+      <table class="candidates-table">
+        <thead>
+          <tr>
+            <th>Candidato</th>
+            <th>Partido</th>
+            <th>Votos</th>
+            <th>%</th>
+            <th>Tendencia</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let c of candidatos">
+            <td class="td-name">{{ c.nombre }}</td>
+            <td class="td-party">{{ c.partido }}</td>
+            <td>{{ c.votos | number }}</td>
+            <td><span class="badge-pct" [ngClass]="c.colorClass">{{ c.pct }}%</span></td>
+            <td class="td-trend">
+              <span *ngIf="c.tendencia === 'up'"   class="trend-up">↗︎</span>
+              <span *ngIf="c.tendencia === 'down'"  class="trend-down">↘︎</span>
+              <span *ngIf="c.tendencia === 'flat'"  class="trend-flat">—</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3 class="section-title">Distribución de Votos</h3>
+      <div class="pie-chart-container">
+        <svg viewBox="0 0 200 200" class="pie-svg">
+          <circle cx="100" cy="100" r="80" fill="transparent" stroke="#2563eb" stroke-width="80"
+            stroke-dasharray="192.3 307.7" stroke-dashoffset="0"/>
+          <circle cx="100" cy="100" r="80" fill="transparent" stroke="#ef4444" stroke-width="80"
+            stroke-dasharray="175.9 324.1" stroke-dashoffset="-192.3"/>
+          <circle cx="100" cy="100" r="80" fill="transparent" stroke="#22c55e" stroke-width="80"
+            stroke-dasharray="89.5 410.5" stroke-dashoffset="-368.2"/>
+          <circle cx="100" cy="100" r="80" fill="transparent" stroke="#f59e0b" stroke-width="80"
+            stroke-dasharray="42.0 458.0" stroke-dashoffset="-457.7"/>
+          <circle cx="100" cy="100" r="40" fill="white"/>
+        </svg>
+        <div class="pie-legend">
+          <div class="legend-item" *ngFor="let c of candidatos">
+            <span class="legend-dot" [ngClass]="c.colorClass"></span>
+            <span>{{ c.nombre.split(' ')[0] }} {{ c.pct }}%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 class="section-title">Mapa de Resultados por Departamento</h3>
+    <table class="dept-table">
+      <thead>
+        <tr>
+          <th>Departamento</th>
+          <th>Procesado</th>
+          <th>Participación</th>
+          <th>Líder Actual</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let d of departamentos">
+          <td class="td-dept"><span>📍</span> {{ d.nombre }}</td>
+          <td>
+            <div class="dept-progress-wrap">
+              <div class="progress-bar small"><div class="progress-fill" [style.width]="d.procesado + '%'"></div></div>
+              <span>{{ d.procesado }}%</span>
+            </div>
+          </td>
+          <td>{{ d.participacion }}%</td>
+          <td><span class="lider-badge">{{ d.lider }}</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+</main>
+
+<!-- ===================== VISTA: PREDICCIONES ===================== -->
+<main class="main-content" *ngIf="vistaActiva === 'predicciones'">
+
+  <div class="page-header">
+    <h1>Predicciones y Proyecciones</h1>
+    <p>Análisis predictivo basado en encuestas y resultados parciales</p>
+  </div>
+
+  <div class="alert-danger">
+    <span>ℹ️</span>
+    <div>
+      <strong>Advertencia Importante:</strong>
+      Las predicciones NO son resultados oficiales. Son proyecciones estadísticas basadas en modelos matemáticos
+      que pueden tener márgenes de error. Los únicos resultados válidos son los publicados por la Registraduría
+      Nacional del Estado Civil.
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn" [class.active]="tabPrediccion === 'vivo'" (click)="tabPrediccion = 'vivo'">
+      Resultados en Vivo
+    </button>
+    <button class="tab-btn" [class.active]="tabPrediccion === 'encuestas'" (click)="tabPrediccion = 'encuestas'">
+      Encuestas Pre-Electorales
+    </button>
+  </div>
+
+  <!-- TAB: RESULTADOS EN VIVO -->
+  <div *ngIf="tabPrediccion === 'vivo'">
+
+    <div class="stats-grid three-col">
+      <div class="stat-card">
+        <div class="stat-header"><span class="stat-label">Datos Procesados</span><span class="stat-icon stat-icon--blue">〜</span></div>
+        <div class="stat-value blue">91.2%</div>
+        <div class="progress-bar"><div class="progress-fill" style="width:91.2%"></div></div>
+        <div class="stat-sub">Actualizado hace 2 minutos</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-header"><span class="stat-label">Nivel de Confianza</span><span class="stat-icon stat-icon--green">🎯</span></div>
+        <div class="stat-value green">94.2%</div>
+        <div class="progress-bar"><div class="progress-fill green" style="width:94.2%"></div></div>
+        <div class="stat-sub">Muy alta confiabilidad</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-header"><span class="stat-label">Incertidumbre</span><span class="stat-icon stat-icon--orange">↗</span></div>
+        <div class="stat-value orange">±1.8%</div>
+        <div class="progress-bar"><div class="progress-fill orange" style="width:18%"></div></div>
+        <div class="stat-sub">Margen de error estimado</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 class="section-title">Proyección Final - Probabilidad de Victoria</h3>
+      <p class="section-sub">Basado en 91.2% de votos procesados con modelo predictivo bayesiano</p>
+      <div class="prob-list">
+        <div class="prob-item" *ngFor="let c of proyecciones">
+          <div class="prob-header">
+            <div>
+              <span class="prob-name">{{ c.nombre }}</span>
+              <span class="prob-range">Actual: {{ c.actual }}% → Proyectado: {{ c.proyectado }}%</span>
+            </div>
+            <span class="prob-badge" [ngClass]="c.colorClass">{{ c.probabilidad }}% probabilidad</span>
+          </div>
+          <div class="prob-bar-wrap">
+            <div class="prob-bar">
+              <div class="prob-fill" [style.width]="c.probabilidad + '%'" [ngClass]="c.colorClass"></div>
+            </div>
+            <span class="prob-pct-label">{{ c.probabilidad }}%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 class="section-title">Comparación: Resultado Actual vs Proyección Final</h3>
+      <div class="bar-chart">
+        <div class="bar-y-labels">
+          <span>40</span><span>30</span><span>20</span><span>10</span><span>0</span>
+        </div>
+        <div class="bar-groups">
+          <div class="bar-group" *ngFor="let c of proyecciones">
+            <div class="bars">
+              <div class="bar actual"     [style.height]="(c.actual     / 45 * 200) + 'px'"></div>
+              <div class="bar proyectado" [style.height]="(c.proyectado / 45 * 200) + 'px'"></div>
+            </div>
+            <span class="bar-label">{{ c.nombre.split(' ')[0] }} {{ c.nombre.split(' ')[1] }}</span>
+          </div>
+        </div>
+      </div>
+      <div class="chart-legend">
+        <span class="legend-dot-sq blue"></span> Resultado Actual
+        <span class="legend-dot-sq green" style="margin-left:16px"></span> Proyección Final
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 class="section-title">Metodología y Factores Considerados</h3>
+      <p class="section-sub">Variables utilizadas en el modelo predictivo</p>
+      <div class="method-grid">
+        <div class="method-item" *ngFor="let m of metodologia">
+          <div class="method-icon" [ngClass]="m.iconClass">{{ m.icon }}</div>
+          <div>
+            <div class="method-title">{{ m.titulo }}</div>
+            <div class="method-desc">{{ m.descripcion }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- TAB: ENCUESTAS PRE-ELECTORALES -->
+  <div *ngIf="tabPrediccion === 'encuestas'">
+
+    <div class="card">
+      <h3 class="section-title">Encuestas Pre-Electorales - Agregador</h3>
+      <p class="section-sub">Promedio ponderado de encuestas realizadas en marzo 2026</p>
+      <div class="bar-chart encuestas-chart">
+        <div class="bar-y-labels">
+          <span>40</span><span>30</span><span>20</span><span>10</span><span>0</span>
+        </div>
+        <div class="bar-groups">
+          <div class="bar-group" *ngFor="let c of encuestasAgregadas">
+            <div class="bars">
+              <div class="bar enc-cnc"     [style.height]="(c.cnc     / 45 * 200) + 'px'"></div>
+              <div class="bar enc-invamer" [style.height]="(c.invamer / 45 * 200) + 'px'"></div>
+              <div class="bar enc-yanhaas" [style.height]="(c.yanhaas / 45 * 200) + 'px'"></div>
+            </div>
+            <span class="bar-label">{{ c.nombre.split(' ')[0] }} {{ c.nombre.split(' ')[1] }}</span>
+          </div>
+        </div>
+      </div>
+      <div class="chart-legend">
+        <span class="legend-dot-sq enc-cnc-sq"></span> CNC (15 Mar)
+        <span class="legend-dot-sq enc-invamer-sq" style="margin-left:16px"></span> Invamer (18 Mar)
+        <span class="legend-dot-sq enc-yanhaas-sq" style="margin-left:16px"></span> YanHaas (20 Mar)
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 class="section-title">Promedio Ponderado de Encuestas</h3>
+      <p class="section-sub">Intención de voto agregada según recencia y tamaño de muestra</p>
+      <div class="pond-list">
+        <div class="pond-item" *ngFor="let c of promedioEncuestas">
+          <div class="pond-header">
+            <span class="pond-name">{{ c.nombre }}</span>
+            <span class="pond-badge" [ngClass]="c.colorClass">{{ c.promedio }}%</span>
+          </div>
+          <div class="pond-bar-track">
+            <div class="pond-bar-fill" [ngClass]="c.colorClass" [style.width]="c.promedio + '%'"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 class="section-title">Fuentes de Encuestas Consideradas</h3>
+      <p class="section-sub">Metodología y ponderación aplicada</p>
+      <table class="fuentes-table">
+        <thead>
+          <tr>
+            <th>Fuente</th>
+            <th>Fecha</th>
+            <th>Muestra</th>
+            <th>Margen Error</th>
+            <th>Peso</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let f of fuentesEncuestas">
+            <td class="td-name">{{ f.fuente }}</td>
+            <td>{{ f.fecha }}</td>
+            <td>{{ f.muestra | number }}</td>
+            <td>{{ f.margen }}</td>
+            <td><span class="peso-badge">{{ f.peso }}</span></td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="criterios-box">
+        <h4>Criterios de Ponderación</h4>
+        <ul>
+          <li><strong>Recencia:</strong> Mayor peso a encuestas más recientes</li>
+          <li><strong>Tamaño de muestra:</strong> Muestras mayores tienen más peso</li>
+          <li><strong>Margen de error:</strong> Menor margen = mayor confiabilidad</li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+
+</main>
+
+<!-- ===================== VISTA: ASISTENTE ===================== -->
+<main class="main-content" *ngIf="vistaActiva === 'asistente'">
+
+  <div class="page-header">
+    <h1>Asistente Electoral</h1>
+    <p>Consulta información electoral mediante lenguaje natural</p>
+  </div>
+
+  <div class="asistente-layout">
+
+    <div class="asistente-sidebar">
+      <div class="card sidebar-card">
+        <h4>Acciones Rápidas</h4>
+        <button class="quick-action" *ngFor="let a of accionesRapidas" (click)="enviarMensaje(a.texto)">
+          <span>{{ a.icon }}</span> {{ a.texto }}
+        </button>
+      </div>
+      <div class="card sidebar-card">
+        <h4>Capacidades</h4>
+        <ul class="capacidades-list">
+          <li *ngFor="let cap of capacidades">✓ {{ cap }}</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="chat-container card">
+      <div class="chat-header">
+        <div class="bot-avatar">🤖</div>
+        <div>
+          <div class="bot-name">Asistente Electoral</div>
+          <div class="bot-status"><span class="status-dot"></span> En línea</div>
+        </div>
+      </div>
+
+      <div class="chat-messages">
+        <div class="message" *ngFor="let msg of mensajes" [ngClass]="msg.tipo">
+          <div class="msg-avatar" *ngIf="msg.tipo === 'bot'">🤖</div>
+          <div class="msg-bubble">
+            <p>{{ msg.texto }}</p>
+            <span class="msg-time">{{ msg.hora }}</span>
+          </div>
+        </div>
+        <div class="typing" *ngIf="escribiendo">
+          <span></span><span></span><span></span>
+        </div>
+      </div>
+
+      <div class="chat-input-area">
+        <input
+          type="text"
+          [(ngModel)]="inputMensaje"
+          placeholder="Escribe tu pregunta aquí..."
+          (keyup.enter)="enviarMensaje(inputMensaje)"
+        />
+        <button class="send-btn" (click)="enviarMensaje(inputMensaje)">➤</button>
+      </div>
+      <div class="chat-footer-note">Powered by AI • Los datos mostrados son con fines informativos</div>
+    </div>
+
+  </div>
+
+</main>

@@ -1,0 +1,118 @@
+<div class="page-header">
+  <div>
+    <h1>Predicciones y Proyecciones</h1>
+    <p>Análisis predictivo basado en encuestas y resultados parciales</p>
+  </div>
+</div>
+
+<div class="alert-danger">
+  <span>ℹ️</span>
+  <div>
+    <strong>Advertencia Importante:</strong>
+    Las predicciones NO son resultados oficiales. Son proyecciones estadísticas basadas en modelos matemáticos
+    que pueden tener márgenes de error. Los únicos resultados válidos son los publicados por la Registraduría Nacional del Estado Civil.
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab-btn" [class.active]="tab === 'vivo'" (click)="tab = 'vivo'">Resultados en Vivo</button>
+  <button class="tab-btn" [class.active]="tab === 'encuestas'" (click)="tab = 'encuestas'">Encuestas Pre-Electorales</button>
+</div>
+
+<div *ngIf="tab === 'vivo'">
+  <div class="stats-grid three-col">
+    <div class="stat-card">
+      <div class="stat-label">Datos Procesados</div>
+      <div class="stat-value blue">91.2%</div>
+      <div class="prog-bar-mini"><div class="prog-fill-mini fill-blue" style="width:91.2%"></div></div>
+      <div class="stat-sub">Actualizado hace 2 minutos</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Nivel de Confianza</div>
+      <div class="stat-value green">94.2%</div>
+      <div class="prog-bar-mini"><div class="prog-fill-mini fill-green" style="width:94.2%"></div></div>
+      <div class="stat-sub">Muy alta confiabilidad</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Incertidumbre</div>
+      <div class="stat-value orange">±1.8%</div>
+      <div class="prog-bar-mini"><div class="prog-fill-mini fill-orange" style="width:18%"></div></div>
+      <div class="stat-sub">Margen de error estimado</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Proyección Final - Probabilidad de Victoria</h3>
+    <p class="card-sub">Basado en 91.2% de votos procesados con modelo predictivo bayesiano</p>
+    <div class="prob-list">
+      <div class="prob-item" *ngFor="let c of proyecciones">
+        <div class="prob-header">
+          <div>
+            <span class="prob-name">{{ c.nombre }}</span>
+            <span class="prob-range">Actual: {{ c.actual }}% → Proyectado: {{ c.proyectado }}%</span>
+          </div>
+          <span class="prob-badge" [ngClass]="c.colorClass">{{ c.probabilidad }}% probabilidad</span>
+        </div>
+        <div class="prob-bar-wrap">
+          <div class="prob-bar">
+            <div class="prob-fill" [style.width]="c.probabilidad + '%'" [ngClass]="c.colorClass"></div>
+          </div>
+          <span class="prob-pct-label">{{ c.probabilidad }}%</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Comparación: Resultado Actual vs Proyección Final</h3>
+    <div class="bar-chart">
+      <div class="bar-y-labels">
+        <span>40</span><span>30</span><span>20</span><span>10</span><span>0</span>
+      </div>
+      <div class="bar-groups">
+        <div class="bar-group" *ngFor="let c of proyecciones">
+          <div class="bars">
+            <div class="bar proyectado-green" [style.height]="(c.proyectado / 45 * 200) + 'px'"></div>
+          </div>
+          <span class="bar-label">{{ c.nombre.split(' ')[0] }} {{ c.nombre.split(' ')[1] }}</span>
+        </div>
+      </div>
+    </div>
+    <div class="chart-legend-row">
+      <span class="legend-sq blue-sq"></span> Resultado Actual
+      <span class="legend-sq green-sq" style="margin-left:14px"></span> Proyección Final
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Metodología y Factores Considerados</h3>
+    <p class="card-sub">Variables utilizadas en el modelo predictivo</p>
+    <div class="method-grid">
+      <div class="method-item" *ngFor="let m of metodologia">
+        <div class="method-icon" [ngClass]="m.iconClass">{{ m.icon }}</div>
+        <div>
+          <div class="method-title">{{ m.titulo }}</div>
+          <div class="method-desc">{{ m.descripcion }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div *ngIf="tab === 'encuestas'">
+  <div class="card">
+    <h3>Promedio Ponderado de Encuestas</h3>
+    <p class="card-sub">Intención de voto agregada según recencia y tamaño de muestra</p>
+    <div class="pond-list">
+      <div class="pond-item" *ngFor="let c of promedioEncuestas">
+        <div class="pond-header">
+          <span class="pond-name">{{ c.nombre }}</span>
+          <span class="pond-badge" [ngClass]="c.colorClass">{{ c.promedio }}%</span>
+        </div>
+        <div class="pond-bar-track">
+          <div class="pond-bar-fill" [ngClass]="c.colorClass" [style.width]="c.promedio + '%'"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

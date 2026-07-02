@@ -1,0 +1,206 @@
+<div class="page-header">
+  <div>
+    <h1>Gestión de Usuarios</h1>
+    <p>Administrar usuarios y permisos del sistema</p>
+  </div>
+
+  <button class="btn-primary" (click)="abrirModal()">+ Nuevo Usuario</button>
+</div>
+
+<div class="stats-grid">
+  <div class="stat-card" *ngFor="let s of stats">
+    <div class="stat-top">
+      <div>
+        <div class="stat-label">{{ s.label }}</div>
+        <div class="stat-value">{{ s.value }}</div>
+        <div class="stat-sub">{{ s.sub }}</div>
+      </div>
+      <div class="stat-icon" [ngClass]="s.iconClass">{{ s.icon }}</div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h3>Usuarios del Sistema</h3>
+
+    <div class="search-box">
+      <span>🔍</span>
+      <input
+        type="text"
+        placeholder="Buscar usuario..."
+        [(ngModel)]="busqueda"
+      />
+    </div>
+  </div>
+
+  <div class="alert-error" *ngIf="error && !modalAbierto">{{ error }}</div>
+
+  <div *ngIf="cargando">Cargando usuarios...</div>
+
+  <table class="admin-table" *ngIf="!cargando">
+    <thead>
+      <tr>
+        <th>Nombre</th>
+        <th>Correo Electrónico</th>
+        <th>Rol</th>
+        <th>Último Acceso</th>
+        <th>Estado</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      <tr *ngFor="let u of usuariosFiltrados">
+        <td class="td-bold">{{ u.nombre }}</td>
+        <td class="td-correo">{{ u.correo }}</td>
+
+        <td>
+          <span class="badge-rol" [ngClass]="u.rolClass">
+            {{ u.rol }}
+          </span>
+        </td>
+
+        <td>{{ u.ultimoAcceso }}</td>
+
+        <td>
+          <span [ngClass]="u.activo ? 'badge-activo' : 'badge-inactivo'">
+            {{ u.activo ? 'Activo' : 'Inactivo' }}
+          </span>
+        </td>
+
+        <td class="td-actions">
+          <button
+            class="icon-btn edit"
+            type="button"
+            [disabled]="guardando"
+            (click)="abrirModal(u)"
+          >
+            ✏
+          </button>
+
+          <button
+            class="icon-btn del"
+            type="button"
+            [disabled]="guardando"
+            (click)="eliminar(u)"
+          >
+            🗑
+          </button>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="card">
+  <h3>Roles y Permisos del Sistema</h3>
+
+  <div class="roles-list">
+    <div class="rol-item" *ngFor="let r of roles" [ngClass]="r.badgeClass + '-bg'">
+      <div class="rol-header">
+        <span class="rol-nombre">{{ r.nombre }}</span>
+        <span class="rol-badge" [ngClass]="r.badgeClass">{{ r.badge }}</span>
+      </div>
+
+      <div class="rol-desc">{{ r.desc }}</div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" *ngIf="modalAbierto" (click)="cerrarModal()">
+  <div class="modal" (click)="$event.stopPropagation()">
+
+    <div class="modal-header">
+      <h3>{{ modoEdicion ? 'Editar Usuario' : 'Nuevo Usuario' }}</h3>
+      <button
+        class="modal-close"
+        type="button"
+        [disabled]="guardando"
+        (click)="cerrarModal()"
+      >
+        ✕
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <div class="alert-error" *ngIf="error">{{ error }}</div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Nombre Completo <span class="req">*</span></label>
+          <input
+            type="text"
+            [(ngModel)]="form.nombre"
+            placeholder="Ej: Juan Pérez"
+            [disabled]="guardando"
+          />
+        </div>
+
+        <div class="form-group">
+          <label>Correo Electrónico <span class="req">*</span></label>
+          <input
+            type="email"
+            [(ngModel)]="form.correo"
+            placeholder="correo@elecciones.gov.co"
+            [disabled]="guardando"
+          />
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Rol <span class="req">*</span></label>
+          <select
+            [(ngModel)]="form.rol"
+            (ngModelChange)="actualizarRolClass()"
+            [disabled]="guardando"
+          >
+            <option value="">Seleccionar rol...</option>
+            <option value="Administrador">Administrador</option>
+            <option value="Analista">Analista</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Estado</label>
+          <select [(ngModel)]="form.activo" [disabled]="guardando">
+            <option [ngValue]="true">Activo</option>
+            <option [ngValue]="false">Inactivo</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group" *ngIf="!modoEdicion">
+        <label>Contraseña temporal <span class="req">*</span></label>
+        <input
+          type="password"
+          [(ngModel)]="form.password"
+          placeholder="Mínimo 8 caracteres"
+          [disabled]="guardando"
+        />
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button
+        class="btn-outline"
+        type="button"
+        [disabled]="guardando"
+        (click)="cerrarModal()"
+      >
+        Cancelar
+      </button>
+
+      <button
+        class="btn-primary"
+        type="button"
+        [disabled]="guardando"
+        (click)="guardar()"
+      >
+        {{ guardando ? 'Guardando...' : (modoEdicion ? 'Guardar Cambios' : 'Crear Usuario') }}
+      </button>
+    </div>
+
+  </div>
+</div>

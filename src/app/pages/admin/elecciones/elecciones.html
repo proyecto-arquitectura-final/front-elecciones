@@ -1,0 +1,207 @@
+<div class="page-header">
+  <div>
+    <h1>Gestión de Elecciones</h1>
+    <p>Configurar y administrar procesos electorales</p>
+  </div>
+
+  <button class="btn-primary" (click)="abrirModal()">+ Nueva Elección</button>
+</div>
+
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="stat-top">
+      <div>
+        <div class="stat-label">Elecciones Activas</div>
+        <div class="stat-value">{{ activas }}</div>
+        <div class="stat-sub">En conteo en vivo</div>
+      </div>
+      <div class="stat-icon icon-blue">🗳</div>
+    </div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-top">
+      <div>
+        <div class="stat-label">Programadas</div>
+        <div class="stat-value">{{ programadas }}</div>
+        <div class="stat-sub">Configuradas</div>
+      </div>
+      <div class="stat-icon icon-green">📅</div>
+    </div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-top">
+      <div>
+        <div class="stat-label">Total Elecciones</div>
+        <div class="stat-value">{{ elecciones.length }}</div>
+        <div class="stat-sub">Registradas</div>
+      </div>
+      <div class="stat-icon icon-purple">📍</div>
+    </div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-top">
+      <div>
+        <div class="stat-label">Trazabilidad</div>
+        <div class="stat-value">100%</div>
+        <div class="stat-sub">Auditoría activa</div>
+      </div>
+      <div class="stat-icon icon-orange">⚙</div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h3>Elecciones Configuradas</h3>
+    <button class="btn-outline" (click)="cargar()">🔄 Recargar</button>
+  </div>
+
+  <p *ngIf="error" style="color:#dc2626">{{ error }}</p>
+
+  <table class="admin-table">
+    <thead>
+      <tr>
+        <th>Nombre</th>
+        <th>Tipo</th>
+        <th>Fecha</th>
+        <th>Ronda</th>
+        <th>Progreso</th>
+        <th>Estado</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      <tr *ngFor="let e of elecciones">
+        <td class="td-bold">{{ e.name }}</td>
+
+        <td>
+          <span class="tag" [ngClass]="tipoClass(e.type)">
+            {{ toVistaTipo(e.type) }}
+          </span>
+        </td>
+
+        <td>📅 {{ e.electionDate }}</td>
+
+        <td>{{ toVistaRonda(e.round) }}</td>
+
+        <td>
+          <ng-container *ngIf="progreso(e) > 0; else sinIniciar">
+            <div class="prog-wrap">
+              <div class="prog-bar">
+                <div class="prog-fill" [style.width]="progreso(e) + '%'"></div>
+              </div>
+              <span>{{ progreso(e) }}%</span>
+            </div>
+          </ng-container>
+
+          <ng-template #sinIniciar>
+            <span class="td-gray">Sin iniciar</span>
+          </ng-template>
+        </td>
+
+        <td>
+          <span
+            [ngClass]="
+              e.state === 'ABIERTA' || e.state === 'EN_CONTEO'
+                ? 'badge-activo'
+                : e.state === 'CERRADA' || e.state === 'ARCHIVADA'
+                  ? 'badge-finalizada'
+                  : 'badge-programada'
+            "
+          >
+            {{ toVistaEstado(e.state) }}
+          </span>
+        </td>
+
+        <td class="td-actions">
+          <button class="icon-btn edit" (click)="abrirModal(e)">✏</button>
+          <button class="icon-btn del" (click)="eliminar(e)">🗑</button>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="card">
+  <h3>Configuración Rápida</h3>
+
+  <div class="config-grid">
+    <div class="config-card" *ngFor="let c of configuracion">
+      <div class="cfg-icon">{{ c.icon }}</div>
+      <div class="cfg-title">{{ c.titulo }}</div>
+      <div class="cfg-sub">{{ c.descripcion }}</div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" *ngIf="modalAbierto" (click)="cerrarModal()">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>{{ modoEdicion ? 'Editar Elección' : 'Nueva Elección' }}</h3>
+      <button class="modal-close" (click)="cerrarModal()">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <p *ngIf="error" style="color:#dc2626">{{ error }}</p>
+
+      <div class="form-group">
+        <label>Nombre de la Elección <span class="req">*</span></label>
+        <input
+          type="text"
+          [(ngModel)]="form.nombre"
+          placeholder="Ej: Elecciones Presidenciales 2026"
+        />
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Tipo <span class="req">*</span></label>
+          <select [(ngModel)]="form.tipo">
+            <option value="">Seleccionar...</option>
+            <option value="Presidencia">Presidencia</option>
+            <option value="Senado">Senado</option>
+            <option value="Cámara">Cámara</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Ronda</label>
+          <select [(ngModel)]="form.ronda">
+            <option value="Ninguna">Ninguna</option>
+            <option value="Primera Vuelta">Primera Vuelta</option>
+            <option value="Segunda Vuelta">Segunda Vuelta</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Fecha <span class="req">*</span></label>
+          <input type="date" [(ngModel)]="form.fecha" />
+        </div>
+
+        <div class="form-group">
+          <label>Estado</label>
+          <select [(ngModel)]="form.estado">
+            <option value="Programada">Programada</option>
+            <option value="Abierta">Abierta</option>
+            <option value="En Conteo">En Conteo</option>
+            <option value="Cerrada">Cerrada</option>
+            <option value="Archivada">Archivada</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-outline" (click)="cerrarModal()">Cancelar</button>
+      <button class="btn-primary" (click)="guardar()">
+        {{ modoEdicion ? 'Guardar Cambios' : 'Crear Elección' }}
+      </button>
+    </div>
+  </div>
+</div>

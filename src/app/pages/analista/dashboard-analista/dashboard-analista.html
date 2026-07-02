@@ -1,0 +1,229 @@
+<!-- HEADER -->
+<div class="page-header">
+  <div>
+    <div class="en-vivo"><span class="dot"></span> En vivo</div>
+    <h1>Bienvenida, María</h1>
+    <p>{{ fechaHoy }}</p>
+  </div>
+  <div class="header-actions">
+    <button class="btn-outline" (click)="actualizar()">🔄 Actualizar</button>
+    <button class="btn-primary-green">⬇ Exportar Resumen</button>
+  </div>
+</div>
+
+<!-- STATS -->
+<div class="stats-grid">
+  <div class="stat-card" *ngFor="let s of stats">
+    <div class="stat-left">
+      <div class="stat-icon" [ngClass]="s.iconClass">{{ s.icon }}</div>
+      <div>
+        <div class="stat-value">{{ s.value }}</div>
+        <div class="stat-label">{{ s.label }}</div>
+        <div class="stat-trend" [ngClass]="s.trendClass">{{ s.trend }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TENDENCIA + INTENCIÓN ACTUAL -->
+<div class="two-col-7-3">
+
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <h3>Tendencia de Intención de Voto</h3>
+        <p class="card-sub">Últimos 7 meses — promedio ponderado de encuestas</p>
+      </div>
+      <span class="period-badge">Nov 2025 – May 2026</span>
+    </div>
+
+    <!-- Gráfica de línea SVG -->
+    <div class="line-chart-wrap">
+      <svg viewBox="0 0 700 220" class="line-svg" preserveAspectRatio="none">
+        <!-- Grid lines -->
+        <line *ngFor="let y of gridY" [attr.x1]="60" [attr.y1]="y.py" [attr.x2]="680" [attr.y2]="y.py" stroke="#f1f5f9" stroke-width="1"/>
+        <text *ngFor="let y of gridY" [attr.x]="50" [attr.y]="y.py + 4" text-anchor="end" font-size="10" fill="#94a3b8">{{ y.label }}</text>
+        <!-- Línea Petro -->
+        <polyline [attr.points]="lineaPetro" fill="none" stroke="#059669" stroke-width="2.5" stroke-linejoin="round"/>
+        <circle *ngFor="let p of puntosPetro" [attr.cx]="p.x" [attr.cy]="p.y" r="4" fill="white" stroke="#059669" stroke-width="2"/>
+        <!-- Línea Hernández -->
+        <polyline [attr.points]="lineaHernandez" fill="none" stroke="#3b82f6" stroke-width="2.5" stroke-linejoin="round"/>
+        <circle *ngFor="let p of puntosHernandez" [attr.cx]="p.x" [attr.cy]="p.y" r="4" fill="white" stroke="#3b82f6" stroke-width="2"/>
+        <!-- Línea Fajardo -->
+        <polyline [attr.points]="lineaFajardo" fill="none" stroke="#8b5cf6" stroke-width="2.5" stroke-linejoin="round"/>
+        <circle *ngFor="let p of puntosFajardo" [attr.cx]="p.x" [attr.cy]="p.y" r="4" fill="white" stroke="#8b5cf6" stroke-width="2"/>
+        <!-- Eje X labels -->
+        <text *ngFor="let m of meses" [attr.x]="m.x" y="215" text-anchor="middle" font-size="10" fill="#94a3b8">{{ m.label }}</text>
+      </svg>
+    </div>
+    <div class="chart-legend">
+      <span class="leg-item green">● Petro</span>
+      <span class="leg-item blue">● Hernández</span>
+      <span class="leg-item purple">● Fajardo</span>
+      <span class="leg-item gray">● Otros</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Intención Actual</h3>
+    <p class="card-sub">Consolidado mayo 2026</p>
+
+    <!-- Donut SVG -->
+    <div class="donut-wrap">
+      <svg viewBox="0 0 160 160" class="donut-svg">
+        <circle cx="80" cy="80" r="60" fill="none" stroke="#059669" stroke-width="28"
+          stroke-dasharray="150.8 251.2" stroke-dashoffset="0" transform="rotate(-90 80 80)"/>
+        <circle cx="80" cy="80" r="60" fill="none" stroke="#3b82f6" stroke-width="28"
+          stroke-dasharray="101.8 301.2" stroke-dashoffset="-150.8" transform="rotate(-90 80 80)"/>
+        <circle cx="80" cy="80" r="60" fill="none" stroke="#8b5cf6" stroke-width="28"
+          stroke-dasharray="71.6 330.4" stroke-dashoffset="-252.6" transform="rotate(-90 80 80)"/>
+        <circle cx="80" cy="80" r="60" fill="none" stroke="#d1d5db" stroke-width="28"
+          stroke-dasharray="52.7 349.3" stroke-dashoffset="-324.2" transform="rotate(-90 80 80)"/>
+        <circle cx="80" cy="80" r="40" fill="white"/>
+      </svg>
+    </div>
+
+    <div class="donut-legend">
+      <div class="dleg-item" *ngFor="let c of intencionActual">
+        <span class="dleg-dot" [ngClass]="c.colorClass"></span>
+        <span class="dleg-name">{{ c.nombre }}</span>
+        <span class="dleg-pct">{{ c.pct }}%</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- INTENCIÓN POR REGIÓN + RADAR -->
+<div class="two-col">
+
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <h3>Intención por Región</h3>
+        <p class="card-sub">Principales ciudades y regiones</p>
+      </div>
+      <span class="icon-gray">📍</span>
+    </div>
+    <div class="bar-chart-region">
+      <div class="rbars">
+        <div class="rbar-col" *ngFor="let r of regionData">
+          <div class="rbar" [style.height]="(r.pct / 60 * 180) + 'px'"></div>
+          <span class="rbar-label">{{ r.ciudad }}</span>
+        </div>
+      </div>
+      <div class="rbar-y">
+        <span>60%</span><span>45%</span><span>30%</span><span>15%</span><span>0%</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <h3>Percepción de Competencias</h3>
+        <p class="card-sub">Puntuación promedio por dimensión</p>
+      </div>
+      <span class="icon-gray">🔮</span>
+    </div>
+    <!-- Radar SVG -->
+    <div class="radar-wrap">
+      <svg viewBox="0 0 260 260" class="radar-svg">
+        <!-- Fondo hexagonal -->
+        <polygon points="130,20 225,72 225,188 130,240 35,188 35,72" fill="none" stroke="#f1f5f9" stroke-width="1"/>
+        <polygon points="130,50 205,88 205,172 130,210 55,172 55,88"  fill="none" stroke="#f1f5f9" stroke-width="1"/>
+        <polygon points="130,80 185,104 185,156 130,180 75,156 75,104" fill="none" stroke="#f1f5f9" stroke-width="1"/>
+        <!-- Área Fajardo -->
+        <polygon points="130,45 210,95 200,175 130,215 60,170 55,85" fill="#8b5cf6" fill-opacity=".2" stroke="#8b5cf6" stroke-width="1.5"/>
+        <!-- Labels -->
+        <text x="130" y="12" text-anchor="middle" font-size="10" fill="#64748b">Economía</text>
+        <text x="238" y="76" text-anchor="start"  font-size="10" fill="#64748b">Seguridad</text>
+        <text x="238" y="192" text-anchor="start" font-size="10" fill="#64748b">Educación</text>
+        <text x="130" y="256" text-anchor="middle" font-size="10" fill="#64748b">Salud</text>
+        <text x="22"  y="192" text-anchor="end"   font-size="10" fill="#64748b">Corrupción</text>
+        <text x="22"  y="76"  text-anchor="end"   font-size="10" fill="#64748b">Paz</text>
+      </svg>
+    </div>
+    <div class="radar-legend">
+      <span class="leg-item green">■ Petro</span>
+      <span class="leg-item blue">■ Hernández</span>
+      <span class="leg-item purple">■ Fajardo</span>
+    </div>
+  </div>
+
+</div>
+
+<!-- ENCUESTAS RECIENTES -->
+<div class="card">
+  <div class="card-header">
+    <div>
+      <h3>Encuestas Recientes</h3>
+      <p class="card-sub">Seguimiento de calidad y validación</p>
+    </div>
+    <a routerLink="/analista/encuestas" class="ver-todas">Ver todas ↗</a>
+  </div>
+  <table class="analista-table">
+    <thead>
+      <tr>
+        <th>Firma Encuestadora</th>
+        <th>Fecha</th>
+        <th>Muestra</th>
+        <th>Margen Error</th>
+        <th>Confianza</th>
+        <th>Estado</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let e of encuestasRecientes">
+        <td class="td-bold">{{ e.firma }}</td>
+        <td>{{ e.fecha }}</td>
+        <td>{{ e.muestra | number }}</td>
+        <td>{{ e.margen }}</td>
+        <td>{{ e.confianza }}%</td>
+        <td>
+          <span [ngClass]="e.estado === 'Validada' ? 'badge-validada' : 'badge-revision'">
+            {{ e.estado === 'Validada' ? '✔' : '⏱' }} {{ e.estado }}
+          </span>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- TAREAS + ACCIONES RÁPIDAS -->
+<div class="two-col">
+
+  <div class="card">
+    <h3>Tareas Pendientes</h3>
+    <div class="tareas-list">
+      <div class="tarea-item" *ngFor="let t of tareas">
+        <span class="tarea-icon" [ngClass]="t.iconClass">{{ t.icon }}</span>
+        <span class="tarea-texto">{{ t.texto }}</span>
+        <span class="tarea-prioridad" [ngClass]="t.prioClass">{{ t.prioridad }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Acciones Rápidas</h3>
+    <div class="acciones-grid">
+      <button class="accion-card green" routerLink="/analista/encuestas">
+        <span class="accion-icon">📋</span>
+        <span>Nueva Encuesta</span>
+      </button>
+      <button class="accion-card purple" routerLink="/analista/predicciones">
+        <span class="accion-icon">🔮</span>
+        <span>Nueva Proyección</span>
+      </button>
+      <button class="accion-card blue" routerLink="/analista/reportes">
+        <span class="accion-icon">⬇</span>
+        <span>Exportar Reporte</span>
+      </button>
+      <button class="accion-card orange" routerLink="/analista/candidatos">
+        <span class="accion-icon">👥</span>
+        <span>Ver Candidatos</span>
+      </button>
+    </div>
+  </div>
+
+</div>

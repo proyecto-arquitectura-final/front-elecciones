@@ -1,0 +1,247 @@
+<div class="page-header">
+  <div>
+    <h1>Gestión de Encuestas</h1>
+    <p>Administración de encuestas pre-electorales (FR-06)</p>
+  </div>
+
+  <button class="btn-primary" (click)="abrirModal()">+ Nueva Encuesta</button>
+</div>
+
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="stat-label">Total Encuestas</div>
+    <div class="stat-value">{{ encuestas.length }}</div>
+    <div class="stat-icon icon-blue">📈</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-label">Aprobadas</div>
+    <div class="stat-value green">{{ aprobadas }}</div>
+    <span class="badge-aprobada">{{ pctAprobadas }}%</span>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-label">Pendientes</div>
+    <div class="stat-value orange">{{ pendientes }}</div>
+    <span class="badge-revision">Revisión</span>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-label">Muestra Promedio</div>
+    <div class="stat-value">{{ muestraPromedio | number }}</div>
+    <div class="stat-icon icon-purple">📅</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="filters-row">
+    <div class="search-box">
+      <span>🔍</span>
+      <input
+        type="text"
+        placeholder="Buscar por fuente..."
+        [(ngModel)]="busqueda"
+      />
+    </div>
+
+    <button class="btn-outline" (click)="cargar()">🔄 Recargar</button>
+  </div>
+
+  <p *ngIf="error" style="color:#dc2626">{{ error }}</p>
+
+  <div class="table-title">Lista de Encuestas ({{ encuestasFiltradas.length }})</div>
+
+  <table class="admin-table">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Fuente</th>
+        <th>Fecha</th>
+        <th>Tamaño Muestra</th>
+        <th>Margen Error</th>
+        <th>Metodología</th>
+        <th>Resultados</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      <tr *ngFor="let e of encuestasFiltradas">
+        <td class="td-id">#{{ e.id }}</td>
+        <td class="td-bold">{{ e.source }}</td>
+        <td>{{ e.date }}</td>
+
+        <td>
+          <span class="badge-muestra">{{ e.sampleSize | number }}</span>
+        </td>
+
+        <td>±{{ e.marginError }}%</td>
+        <td>{{ e.methodology }}</td>
+
+        <td>
+          <span class="badge-aprobado">{{ e.results?.length || 0 }}</span>
+        </td>
+
+        <td class="td-actions">
+          <button class="icon-btn edit" (click)="abrirModal(e)">✏</button>
+          <button class="icon-btn del" (click)="eliminar(e)">🗑</button>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="two-col">
+  <div class="card">
+    <h3>Vista Detallada - Última Encuesta</h3>
+    <h4 class="sub-title">Intención de Voto</h4>
+
+    <div class="intencion-list">
+      <div class="int-item" *ngFor="let c of intencionVoto">
+        <div class="int-header">
+          <span class="int-name">{{ c.nombre }}</span>
+          <span class="int-pct">{{ c.pct }}%</span>
+        </div>
+
+        <div class="int-bar-track">
+          <div
+            class="int-bar-fill"
+            [ngClass]="c.colorClass"
+            [style.width]="c.pct + '%'"
+          ></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Detalles Metodológicos</h3>
+
+    <table class="detail-table">
+      <tr *ngFor="let d of detallesMetod">
+        <td class="dt-label">{{ d.label }}:</td>
+        <td class="dt-value">{{ d.value }}</td>
+      </tr>
+    </table>
+  </div>
+</div>
+
+<div class="card">
+  <h3>Criterios de Validación de Encuestas (FR-06)</h3>
+
+  <div class="criterios-grid">
+    <div class="crit-card blue">
+      <div class="crit-title">Recencia</div>
+      <div class="crit-desc">
+        Mayor peso a encuestas realizadas en fechas más cercanas a la elección
+      </div>
+    </div>
+
+    <div class="crit-card green">
+      <div class="crit-title">Tamaño de Muestra</div>
+      <div class="crit-desc">
+        Muestras mayores tienen mayor ponderación
+      </div>
+    </div>
+
+    <div class="crit-card purple">
+      <div class="crit-title">Margen de Error</div>
+      <div class="crit-desc">
+        Menor margen = mayor confiabilidad
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" *ngIf="modalAbierto" (click)="cerrarModal()">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>{{ modoEdicion ? 'Editar Encuesta' : 'Nueva Encuesta' }}</h3>
+      <button class="modal-close" (click)="cerrarModal()">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <p *ngIf="error" style="color:#dc2626">{{ error }}</p>
+
+      <div class="form-group">
+        <label>Fuente / Firma Encuestadora <span class="req">*</span></label>
+        <input
+          type="text"
+          [(ngModel)]="form.fuente"
+          placeholder="Ej: Centro Nacional de Consultoría"
+        />
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Fecha de Realización <span class="req">*</span></label>
+          <input type="date" [(ngModel)]="form.fecha" />
+        </div>
+
+        <div class="form-group">
+          <label>Tamaño de Muestra <span class="req">*</span></label>
+          <input
+            type="number"
+            [(ngModel)]="form.muestra"
+            placeholder="Ej: 2500"
+            min="1"
+          />
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Margen de Error (%)</label>
+          <input
+            type="number"
+            [(ngModel)]="form.margen"
+            placeholder="2"
+            min="0"
+            step="0.1"
+          />
+        </div>
+
+        <div class="form-group">
+          <label>Metodología</label>
+          <select [(ngModel)]="form.metodologia">
+            <option value="Telefónica">Telefónica</option>
+            <option value="Presencial">Presencial</option>
+            <option value="Digital">Digital</option>
+            <option value="Mixta">Mixta</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Candidato principal</label>
+          <select [(ngModel)]="form.candidateId">
+            <option [ngValue]="null">Sin resultado</option>
+            <option *ngFor="let c of candidatos" [ngValue]="c.id">
+              {{ c.name }}
+            </option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Porcentaje</label>
+          <input
+            type="number"
+            [(ngModel)]="form.percentage"
+            placeholder="0"
+            min="0"
+            max="100"
+            step="0.1"
+          />
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-outline" (click)="cerrarModal()">Cancelar</button>
+      <button class="btn-primary" (click)="guardar()">
+        {{ modoEdicion ? 'Guardar Cambios' : 'Crear Encuesta' }}
+      </button>
+    </div>
+  </div>
+</div>

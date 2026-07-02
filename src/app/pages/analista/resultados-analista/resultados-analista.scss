@@ -1,0 +1,120 @@
+:host { display: block; font-family: 'Segoe UI', sans-serif; color: #0f172a; }
+
+.page-header {
+  display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px;
+  h1 { font-size: 26px; font-weight: 800; }
+  p  { font-size: 13px; color: #64748b; margin-top: 4px; }
+}
+.header-actions { display: flex; gap: 10px; }
+
+.btn-primary-green {
+  background: #059669; color: white; border: none; border-radius: 10px;
+  padding: 9px 18px; font-size: 13px; font-weight: 600; cursor: pointer; transition: .2s;
+  &:hover { background: #047857; }
+}
+.btn-outline {
+  background: white; color: #475569; border: 1px solid #e2e8f0; border-radius: 10px;
+  padding: 9px 14px; font-size: 13px; cursor: pointer; transition: .2s;
+  display: inline-flex; align-items: center; gap: 6px;
+  &:hover { background: #f8fafc; }
+}
+.btn-detalle {
+  background: none; border: 1px solid #e2e8f0; border-radius: 8px;
+  padding: 5px 12px; font-size: 12px; cursor: pointer; color: #059669; font-weight: 600;
+  &:hover { background: #f0fdf4; }
+}
+
+// ─── STATS ────────────────────────────────────────────────
+.stats-grid {
+  display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 22px;
+}
+.stat-card {
+  background: white; border-radius: 14px; padding: 20px;
+  border: 1px solid #f1f5f9; box-shadow: 0 2px 8px rgba(0,0,0,.05);
+}
+.stat-top  { display: flex; justify-content: space-between; align-items: center; }
+.stat-label{ font-size: 12px; color: #64748b; margin-bottom: 6px; }
+.stat-value{
+  font-size: 26px; font-weight: 800;
+  &.red    { color: #dc2626; }
+  &.orange { color: #d97706; }
+}
+.stat-sub  { font-size: 11px; color: #94a3b8; margin-top: 4px; }
+.stat-icon {
+  width: 44px; height: 44px; border-radius: 12px; font-size: 20px;
+  display: flex; align-items: center; justify-content: center;
+  &.icon-green  { background: #dcfce7; }
+  &.icon-blue   { background: #dbeafe; }
+  &.icon-red    { background: #fee2e2; }
+  &.icon-orange { background: #fff7ed; }
+}
+.prog-bar-mini { height: 5px; background: #f1f5f9; border-radius: 99px; overflow: hidden; margin: 6px 0; }
+.prog-fill-mini {
+  height: 100%; border-radius: 99px;
+  &.fill-green  { background: #059669; }
+  &.fill-blue   { background: #2563eb; }
+  &.fill-red    { background: #ef4444; }
+  &.fill-orange { background: #f59e0b; }
+}
+
+// ─── FILTERS CARD ─────────────────────────────────────────
+.filters-card-3 {
+  display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; margin-bottom: 22px;
+  background: white; border-radius: 16px; padding: 20px;
+  border: 1px solid #f1f5f9; box-shadow: 0 2px 10px rgba(0,0,0,.05);
+}
+.filter-group {
+  display: flex; flex-direction: column; gap: 6px;
+  label { font-size: 12px; font-weight: 600; color: #475569; }
+  select { padding: 10px 12px; border: 1px solid #e2e8f0; border-radius: 10px; font-size: 13px; background: #f8fafc; outline: none; }
+}
+
+// ─── CARD ─────────────────────────────────────────────────
+.card {
+  background: white; border-radius: 16px; padding: 22px;
+  border: 1px solid #f1f5f9; box-shadow: 0 2px 10px rgba(0,0,0,.05); margin-bottom: 22px;
+  h3 { font-size: 15px; font-weight: 700; margin-bottom: 14px; }
+}
+.card-header {
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px;
+  h3 { margin-bottom: 0; }
+}
+
+// ─── TABLE ────────────────────────────────────────────────
+.analista-table {
+  width: 100%; border-collapse: collapse; font-size: 13.5px;
+  th {
+    text-align: left; padding: 10px 12px; font-size: 12px;
+    font-weight: 600; color: #059669; border-bottom: 2px solid #f1f5f9;
+  }
+  td { padding: 13px 12px; border-bottom: 1px solid #f8fafc; vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+}
+.td-bold { font-weight: 600; }
+
+.badge-procesado  { background: #dcfce7; color: #059669; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+.badge-procesando { background: #dbeafe; color: #1d4ed8; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+.badge-error      { background: #fee2e2; color: #b91c1c; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+
+.valid-badge  { display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; }
+.valid-green  { color: #059669; }
+.valid-orange { color: #d97706; }
+.valid-red    { color: #dc2626; }
+
+// ─── CARGA MASIVA ─────────────────────────────────────────
+.carga-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; }
+.carga-card {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  padding: 24px 14px; background: #f8fafc; border: 1px solid #e2e8f0;
+  border-radius: 14px; cursor: pointer; transition: .2s; text-align: center;
+  &:hover { background: #f0fdf4; border-color: #bbf7d0; }
+}
+.carga-icon  { font-size: 26px; }
+.carga-title { font-size: 13px; font-weight: 700; }
+.carga-sub   { font-size: 12px; color: #64748b; }
+
+@media (max-width: 1024px) {
+  .stats-grid     { grid-template-columns: repeat(2,1fr); }
+  .filters-card-3 { grid-template-columns: 1fr; }
+  .carga-grid     { grid-template-columns: 1fr; }
+}

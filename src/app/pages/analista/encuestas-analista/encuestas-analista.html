@@ -1,0 +1,106 @@
+<div class="page-header">
+  <div>
+    <h1>Gestión de Encuestas</h1>
+    <p>Administración de encuestas pre-electorales (FR-06)</p>
+  </div>
+  <button class="btn-primary-green">+ Nueva Encuesta</button>
+</div>
+
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="stat-top">
+      <div><div class="stat-label">Total Encuestas</div><div class="stat-value">{{ encuestas.length }}</div></div>
+      <div class="stat-icon icon-green">📈</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-top">
+      <div><div class="stat-label">Aprobadas</div><div class="stat-value green">{{ aprobadas }}</div></div>
+      <span class="badge-aprobada">{{ pctAprobadas }}%</span>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-top">
+      <div><div class="stat-label">Pendientes</div><div class="stat-value orange">{{ pendientes }}</div></div>
+      <span class="badge-revision">Revisión</span>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-top">
+      <div><div class="stat-label">Muestra Promedio</div><div class="stat-value">{{ muestraPromedio | number }}</div></div>
+      <div class="stat-icon icon-purple">📅</div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="filters-row">
+    <div class="search-box flex1">
+      <span>🔍</span>
+      <input type="text" placeholder="Buscar por fuente..." [(ngModel)]="busqueda" />
+    </div>
+    <button class="btn-outline">⬆ Importar CSV</button>
+    <button class="btn-outline">⬇ Exportar Datos</button>
+  </div>
+
+  <div class="table-title">Lista de Encuestas ({{ encuestasFiltradas.length }})</div>
+  <table class="analista-table">
+    <thead>
+      <tr>
+        <th>ID</th><th>Fuente</th><th>Fecha</th><th>Tamaño Muestra</th>
+        <th>Margen Error</th><th>Metodología</th><th>Estado</th><th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let e of encuestasFiltradas">
+        <td class="td-id">{{ e.id }}</td>
+        <td class="td-bold">{{ e.fuente }}</td>
+        <td>{{ e.fecha }}</td>
+        <td><span class="badge-muestra">{{ e.muestra | number }}</span></td>
+        <td>{{ e.margen }}</td>
+        <td>{{ e.metodologia }}</td>
+        <td><span [ngClass]="e.estado === 'Aprobada' ? 'badge-aprobado' : 'badge-pendiente'">{{ e.estado }}</span></td>
+        <td class="td-actions">
+          <button class="icon-btn edit">✏</button>
+          <button class="icon-btn del">🗑</button>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="two-col">
+  <div class="card">
+    <h3>Vista Detallada de Resultados - Última Encuesta</h3>
+    <h4 class="sub-title">Intención de Voto</h4>
+    <div class="intencion-list">
+      <div class="int-item" *ngFor="let c of intencionVoto">
+        <div class="int-header">
+          <span class="int-name">{{ c.nombre }}</span>
+          <span class="int-pct">{{ c.pct }}%</span>
+        </div>
+        <div class="int-bar-track">
+          <div class="int-bar-fill" [ngClass]="c.colorClass" [style.width]="c.pct + '%'"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <h3>Detalles Metodológicos</h3>
+    <table class="detail-table">
+      <tr *ngFor="let d of detallesMetod">
+        <td class="dt-label">{{ d.label }}:</td>
+        <td class="dt-value">{{ d.value }}</td>
+      </tr>
+    </table>
+  </div>
+</div>
+
+<div class="card">
+  <h3>Criterios de Validación de Encuestas (FR-06)</h3>
+  <div class="criterios-grid">
+    <div class="crit-card blue"><div class="crit-title">Recencia</div><div class="crit-desc">Mayor peso a encuestas realizadas en fechas más cercanas a la elección</div></div>
+    <div class="crit-card green"><div class="crit-title">Tamaño de Muestra</div><div class="crit-desc">Mínimo 1,500 personas. Muestras mayores tienen mayor ponderación</div></div>
+    <div class="crit-card purple"><div class="crit-title">Margen de Error</div><div class="crit-desc">Máximo aceptable: ±3.0%. Menor margen = mayor confiabilidad</div></div>
+  </div>
+</div>

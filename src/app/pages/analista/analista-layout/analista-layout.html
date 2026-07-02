@@ -1,0 +1,71 @@
+<div class="analista-wrapper">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+
+    <div class="sidebar-brand">
+      <div class="brand-icon">📊</div>
+      <div>
+        <div class="brand-title">Panel Analista</div>
+        <div class="brand-sub">Elecciones 2026</div>
+      </div>
+    </div>
+
+    <div class="user-card">
+      <div class="user-avatar">M</div>
+      <div>
+        <div class="user-name">{{ nombreUsuario }}</div>
+        <div class="user-role">Analista Electoral</div>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a routerLink="/analista/dashboard" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">⊞</span> Dashboard
+      </a>
+
+      <div class="nav-section">DATOS</div>
+      <a routerLink="/analista/candidatos" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">👤</span> Candidatos
+      </a>
+      <a routerLink="/analista/partidos" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">⚑</span> Partidos
+      </a>
+      <a routerLink="/analista/encuestas" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">📋</span> Encuestas
+      </a>
+
+      <div class="nav-section">ANÁLISIS</div>
+      <a routerLink="/analista/resultados" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">📈</span> Resultados
+      </a>
+      <a routerLink="/analista/predicciones" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">🔮</span> Predicciones
+      </a>
+      <a routerLink="/analista/reportes" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">📄</span> Reportes
+      </a>
+      <a routerLink="/analista/asistente" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">💬</span> Asistente IA
+      </a>
+
+      <div class="nav-section">HERRAMIENTAS</div>
+      <a routerLink="/analista/estadisticas" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">📊</span> Estadísticas
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <a class="nav-item logout" (click)="logout()">
+        <span class="nav-icon">→</span> Cerrar Sesión
+      </a>
+    </div>
+
+  </aside>
+
+  <!-- MAIN -->
+  <main class="analista-main">
+    <router-outlet />
+  </main>
+
+</div>

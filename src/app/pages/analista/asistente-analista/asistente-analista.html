@@ -1,0 +1,57 @@
+<!-- ============ ASISTENTE-ANALISTA.HTML ============ -->
+<div class="page-header">
+  <div>
+    <h1>Asistente Electoral IA</h1>
+    <p>Consulta información electoral mediante lenguaje natural</p>
+  </div>
+</div>
+
+<div class="asistente-layout">
+
+  <div class="asistente-sidebar">
+    <div class="card sidebar-card">
+      <h4>Acciones Rápidas</h4>
+      <button class="quick-action" *ngFor="let a of accionesRapidas" (click)="enviarMensaje(a.texto)">
+        <span>{{ a.icon }}</span> {{ a.texto }}
+      </button>
+    </div>
+    <div class="card sidebar-card">
+      <h4>Capacidades</h4>
+      <ul class="capacidades-list">
+        <li *ngFor="let cap of capacidades">✓ {{ cap }}</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="chat-container card">
+    <div class="chat-header">
+      <div class="bot-avatar">🤖</div>
+      <div>
+        <div class="bot-name">Asistente Electoral</div>
+        <div class="bot-status"><span class="status-dot"></span> En línea</div>
+      </div>
+    </div>
+
+    <div class="chat-messages">
+      <div class="message" *ngFor="let msg of mensajes" [ngClass]="msg.tipo">
+        <div class="msg-avatar" *ngIf="msg.tipo === 'bot'">🤖</div>
+        <div class="msg-bubble">
+          <p>{{ msg.texto }}</p>
+          <span class="msg-time">{{ msg.hora }}</span>
+        </div>
+      </div>
+      <div class="typing" *ngIf="escribiendo">
+        <span></span><span></span><span></span>
+      </div>
+    </div>
+
+    <div class="chat-input-area">
+      <input type="text" [(ngModel)]="inputMensaje"
+        placeholder="Escribe tu pregunta aquí..."
+        (keyup.enter)="enviarMensaje(inputMensaje)" />
+      <button class="send-btn" (click)="enviarMensaje(inputMensaje)">➤</button>
+    </div>
+    <div class="chat-footer-note">Powered by AI • Los datos mostrados son con fines informativos</div>
+  </div>
+
+</div>

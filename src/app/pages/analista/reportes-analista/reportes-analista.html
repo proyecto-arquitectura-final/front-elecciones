@@ -1,0 +1,73 @@
+<div class="page-header">
+  <div>
+    <h1>Generación de Reportes</h1>
+    <p>Exportar datos y análisis del sistema (FR-11)</p>
+  </div>
+  <span class="badge-count">📄 342 reportes este mes</span>
+</div>
+
+<div class="stats-grid">
+  <div class="stat-card" *ngFor="let s of stats">
+    <div class="stat-top">
+      <div>
+        <div class="stat-label">{{ s.label }}</div>
+        <div class="stat-value">{{ s.value }}</div>
+        <div class="stat-sub">{{ s.sub }}</div>
+      </div>
+      <div class="stat-icon" [ngClass]="s.iconClass">{{ s.icon }}</div>
+    </div>
+  </div>
+</div>
+
+<div class="reportes-grid">
+  <div class="card reporte-card" *ngFor="let r of reportes">
+    <div class="rep-header">
+      <div class="rep-icon" [ngClass]="r.iconClass">{{ r.icon }}</div>
+      <div>
+        <div class="rep-title">{{ r.titulo }}</div>
+        <div class="rep-sub">{{ r.descripcion }}</div>
+      </div>
+    </div>
+    <div class="rep-formats">
+      <span class="fmt-badge">Formatos disponibles:</span>
+      <span class="fmt-tag" *ngFor="let f of r.formatos">{{ f }}</span>
+    </div>
+    <div class="rep-date">Último generado: {{ r.ultimoGenerado }}</div>
+    <div class="rep-actions">
+      <button class="btn-primary-green full">⬇ Generar Nuevo</button>
+      <button class="btn-outline full">📄 Exportar CSV</button>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <h3>Vista Previa - Reporte de Participación Electoral</h3>
+  <p class="card-sub">Ejemplo de datos que se incluirán en el reporte</p>
+  <h4 class="chart-subtitle">Votos por Región</h4>
+  <div class="preview-chart">
+    <div class="chart-y">
+      <span>5000000</span><span>4000000</span><span>3000000</span><span>1500000</span><span>0</span>
+    </div>
+    <div class="chart-bars">
+      <div class="chart-col" *ngFor="let r of regionData">
+        <div class="chart-bar" [style.height]="(r.votos / 5000000 * 200) + 'px'"></div>
+        <span class="chart-label">{{ r.region }}</span>
+      </div>
+    </div>
+  </div>
+  <div class="chart-legend-row"><span class="legend-sq blue-sq"></span> Votos Totales</div>
+
+  <h4 class="chart-subtitle" style="margin-top:24px">Datos Tabulados</h4>
+  <table class="analista-table">
+    <thead>
+      <tr><th>Región</th><th>Votos Totales</th><th>Participación</th></tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let r of regionData">
+        <td class="td-bold">{{ r.region }}</td>
+        <td>{{ r.votos | number }}</td>
+        <td>{{ r.participacion }}%</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
