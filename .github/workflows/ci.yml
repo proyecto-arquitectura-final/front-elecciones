@@ -1,0 +1,59 @@
+name: Frontend · CI y solicitud de despliegue
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: frontend-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar frontend
+        uses: actions/checkout@v6
+
+      - name: Configurar Node 22
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Instalar dependencias
+        run: npm ci --no-audit --no-fund
+
+      - name: Ejecutar pruebas
+        run: npm test -- --watch=false
+
+      - name: Compilar Angular para producción
+        run: npm run build
+
+      - name: Validar construcción de imagen Docker
+        run: docker build -t elecciones-frontend:ci .
+
+  dispatch-production:
+    name: Notificar a la plataforma
+    needs: verify
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Iniciar workflow central
+        env:
+          GH_TOKEN: ${{ secrets.PLATFORM_DISPATCH_TOKEN }}
+          SHA: ${{ github.sha }}
+        run: |
+          test -n "$GH_TOKEN" || { echo "Falta PLATFORM_DISPATCH_TOKEN" >&2; exit 2; }
+          gh workflow run component-deploy.yml \
+            --repo proyecto-arquitectura-final/elecciones-plataforma \
+            --ref main \
+            -f component=frontend \
+            -f component_sha="$SHA"
