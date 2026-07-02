@@ -3,7 +3,43 @@
     <h1>Panel de Administración</h1>
     <p>Gestión centralizada del sistema electoral</p>
   </div>
-  <span class="badge-system">▲ Sistema Activo</span>
+  <div class="header-actions">
+    <div class="system-info">
+      <span class="badge-system" [class.badge-warning]="!!error || !!advertencia">
+        <span class="status-dot"></span>
+        {{ error ? 'Sistema no disponible' : advertencia ? 'Carga parcial' : 'Sistema activo' }}
+      </span>
+      <span class="last-update" *ngIf="ultimaActualizacion">
+        Actualizado {{ ultimaActualizacion | date:'HH:mm:ss' }}
+      </span>
+    </div>
+
+    <button
+      type="button"
+      class="btn-refresh"
+      (click)="cargar()"
+      [disabled]="cargando"
+      [attr.aria-busy]="cargando"
+      [attr.title]="cargando ? 'Actualizando información' : 'Actualizar dashboard'">
+      <svg
+        class="refresh-icon"
+        [class.spinning]="cargando"
+        viewBox="0 0 24 24"
+        aria-hidden="true">
+        <path d="M20 11a8.1 8.1 0 0 0-15.5-2M4 4v5h5M4 13a8.1 8.1 0 0 0 15.5 2M20 20v-5h-5"></path>
+      </svg>
+      <span>{{ cargando ? 'Actualizando...' : 'Actualizar' }}</span>
+    </button>
+  </div>
+</div>
+
+<div class="feedback-row" *ngIf="error || advertencia || cargando">
+  <div *ngIf="cargando" class="loading-message" role="status" aria-live="polite">
+    <span class="loading-dot"></span>
+    Cargando información del sistema...
+  </div>
+  <div *ngIf="advertencia && !error" class="alert-warning">{{ advertencia }}</div>
+  <div *ngIf="error" class="alert-error">{{ error }}</div>
 </div>
 
 <!-- STATS -->
@@ -45,11 +81,16 @@
               <span>{{ e.progreso }}%</span>
             </div>
           </td>
-          <td><span class="badge-activa">▲ Activa</span></td>
+          <td><span class="badge-activa">▲ {{ e.estado }}</span></td>
           <td class="td-actions">
-            <button class="icon-btn edit">✏</button>
-            <button class="icon-btn del">🗑</button>
+            <button class="icon-btn edit" routerLink="/admin/elecciones" title="Abrir elecciones">↗</button>
           </td>
+        </tr>
+        <tr *ngIf="!cargando && elecciones.length === 0">
+          <td colspan="6" class="empty-state">No hay elecciones abiertas o en conteo.</td>
+        </tr>
+        <tr *ngIf="cargando && elecciones.length === 0">
+          <td colspan="6" class="empty-state loading-table">Consultando elecciones...</td>
         </tr>
       </tbody>
     </table>
@@ -57,7 +98,7 @@
 
   <div class="card actividad-card">
     <h3>Actividad Reciente</h3>
-    <div class="actividad-list">
+    <div class="actividad-list" *ngIf="actividad.length; else sinActividad">
       <div class="actividad-item" *ngFor="let a of actividad">
         <div class="act-icon" [ngClass]="a.colorClass">{{ a.icon }}</div>
         <div>
@@ -67,6 +108,7 @@
         </div>
       </div>
     </div>
+    <ng-template #sinActividad><p class="card-sub">No hay eventos de auditoría registrados.</p></ng-template>
   </div>
 
 </div>

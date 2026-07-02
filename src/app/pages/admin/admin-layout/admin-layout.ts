@@ -8,7 +8,7 @@ import { AuthService } from '../../../core/services/auth.service';
   standalone: true,
   imports: [RouterModule],
   templateUrl: './admin-layout.html',
-  styleUrl: './admin-layout.scss'
+  styleUrl: './admin-layout.scss',
 })
 export class AdminLayout {
   constructor(private readonly authService: AuthService) {}

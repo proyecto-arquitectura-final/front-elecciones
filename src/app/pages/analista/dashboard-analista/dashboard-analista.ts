@@ -1,99 +1,264 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, inject } from '@angular/core';
+import { refreshView } from '../../../core/utils/zoneless-view.util';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
+import { forkJoin } from 'rxjs';
+import { AuthService } from '../../../core/services/auth.service';
+import { EncuestaService } from '../../../core/services/encuesta.service';
+import { CandidatoService } from '../../../core/services/candidato.service';
+import { PrediccionService } from '../../../core/services/prediccion.service';
+import { ResultadoService } from '../../../core/services/resultado.service';
+import { ReporteService } from '../../../core/services/reporte.service';
+import { Poll } from '../../../core/models/poll.model';
+import { OfficialResult, PredictionItem } from '../../../core/models/result.model';
+
+interface TrendSeries {
+  name: string;
+  color: string;
+  points: string;
+  dots: Array<{ x: number; y: number }>;
+}
 
 @Component({
   selector: 'app-dashboard-analista',
   standalone: true,
   imports: [CommonModule, RouterModule],
   templateUrl: './dashboard-analista.html',
-  styleUrl: './dashboard-analista.scss'
+  styleUrl: './dashboard-analista.scss',
 })
-export class DashboardAnalista {
+export class DashboardAnalista implements OnInit {
+  private readonly cdr = inject(ChangeDetectorRef);
+  nombre = '';
+  fechaHoy = new Date()
+    .toLocaleDateString('es-CO', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    })
+    .replace(/^\w/, (char) => char.toUpperCase());
+  cargando = true;
+  error = '';
+  encuestas: Poll[] = [];
+  resultados: OfficialResult[] = [];
+  predicciones: PredictionItem[] = [];
+  totalCandidatos = 0;
+  series: TrendSeries[] = [];
+  chartLabels: Array<{ label: string; x: number }> = [];
 
-  fechaHoy = new Date().toLocaleDateString('es-CO', { weekday:'long', year:'numeric', month:'long', day:'numeric' })
-    .replace(/^\w/, c => c.toUpperCase());
+  constructor(
+    private readonly authService: AuthService,
+    private readonly encuestaService: EncuestaService,
+    private readonly candidatoService: CandidatoService,
+    private readonly prediccionService: PrediccionService,
+    private readonly resultadoService: ResultadoService,
+    private readonly reporteService: ReporteService,
+  ) {}
 
-  actualizar() { window.location.reload(); }
-
-  stats = [
-    { icon: '📋', iconClass: 'icon-green',  value: '12', label: 'Encuestas Activas',       trend: '↑ +3 este mes',    trendClass: 'trend-up'   },
-    { icon: '👥', iconClass: 'icon-blue',   value: '8',  label: 'Candidatos Registrados',  trend: '2 pendientes',     trendClass: 'trend-gray' },
-    { icon: '🔮', iconClass: 'icon-purple', value: '47', label: 'Proyecciones Generadas',  trend: '↑ +12 esta semana',trendClass: 'trend-up'   },
-    { icon: '📄', iconClass: 'icon-orange', value: '28', label: 'Reportes Exportados',     trend: 'Último: hoy',      trendClass: 'trend-gray' },
-  ];
-
-  // ── Gráfica de línea ────────────────────────────────────
-  meses = [
-    { label: 'Nov', x: 90  },
-    { label: 'Dic', x: 182 },
-    { label: 'Ene', x: 274 },
-    { label: 'Feb', x: 366 },
-    { label: 'Mar', x: 458 },
-    { label: 'Abr', x: 550 },
-    { label: 'May', x: 642 },
-  ];
-
-  gridY = [
-    { label: '40%', py: 20  },
-    { label: '30%', py: 70  },
-    { label: '20%', py: 120 },
-    { label: '10%', py: 170 },
-    { label: '0%',  py: 200 },
-  ];
-
-  private dataPetro     = [32, 34, 31, 35, 38, 37, 40];
-  private dataHernandez = [28, 27, 29, 26, 27, 26, 27];
-  private dataFajardo   = [19, 20, 19, 20, 19, 20, 19];
-
-  private toY(v: number) { return 200 - (v / 45) * 180; }
-  private toPoints(data: number[]) {
-    return data.map((v, i) => `${this.meses[i].x},${this.toY(v)}`).join(' ');
-  }
-  private toPuntos(data: number[]) {
-    return data.map((v, i) => ({ x: this.meses[i].x, y: this.toY(v) }));
+  ngOnInit(): void {
+    this.nombre = this.authService.getName();
+    this.actualizar();
   }
 
-  get lineaPetro()     { return this.toPoints(this.dataPetro);     }
-  get lineaHernandez() { return this.toPoints(this.dataHernandez); }
-  get lineaFajardo()   { return this.toPoints(this.dataFajardo);   }
-  get puntosPetro()    { return this.toPuntos(this.dataPetro);     }
-  get puntosHernandez(){ return this.toPuntos(this.dataHernandez); }
-  get puntosFajardo()  { return this.toPuntos(this.dataFajardo);   }
+  actualizar(): void {
+    this.cargando = true;
+    this.error = '';
+    forkJoin({
+      encuestas: this.encuestaService.listar(),
+      candidatos: this.candidatoService.listar(),
+      predicciones: this.prediccionService.porEncuestas(),
+      resultados: this.resultadoService.listar(),
+    })
+      .pipe(refreshView(this.cdr))
+      .subscribe({
+        next: (data) => {
+          this.encuestas = [...data.encuestas].sort(
+            (a, b) => this.time(a.date) - this.time(b.date),
+          );
+          this.resultados = data.resultados;
+          this.predicciones = data.predicciones;
+          this.totalCandidatos = data.candidatos.length;
+          this.buildTrend();
+          this.cargando = false;
+        },
+        error: (error) => {
+          this.error = error?.error?.message || 'No se pudo cargar el panel del analista.';
+          this.cargando = false;
+          console.error(error);
+        },
+      });
+  }
 
-  // ── Donut ───────────────────────────────────────────────
-  intencionActual = [
-    { nombre: 'Gustavo Petro',  pct: 40, colorClass: 'dot-green'  },
-    { nombre: 'Rodolfo Hdez.',  pct: 27, colorClass: 'dot-blue'   },
-    { nombre: 'Sergio Fajardo', pct: 19, colorClass: 'dot-purple' },
-    { nombre: 'Otros',          pct: 14, colorClass: 'dot-gray'   },
-  ];
+  get stats() {
+    return [
+      {
+        icon: '📋',
+        iconClass: 'icon-green',
+        value: String(this.encuestas.length),
+        label: 'Encuestas Registradas',
+        trend: `${this.encuestasValidas} cumplen criterios`,
+        trendClass: 'trend-up',
+      },
+      {
+        icon: '👥',
+        iconClass: 'icon-blue',
+        value: String(this.totalCandidatos),
+        label: 'Candidatos Registrados',
+        trend: 'Datos del backend',
+        trendClass: 'trend-gray',
+      },
+      {
+        icon: '🔮',
+        iconClass: 'icon-purple',
+        value: String(this.predicciones.length),
+        label: 'Proyecciones Disponibles',
+        trend: 'Basadas en encuestas',
+        trendClass: 'trend-up',
+      },
+      {
+        icon: '🗳',
+        iconClass: 'icon-orange',
+        value: this.votosTotales.toLocaleString('es-CO'),
+        label: 'Votos Consolidados',
+        trend: `${this.resultados.length} registros`,
+        trendClass: 'trend-gray',
+      },
+    ];
+  }
 
-  // ── Barras región ───────────────────────────────────────
-  regionData = [
-    { ciudad: 'Bogotá',      pct: 47 },
-    { ciudad: 'Medellín',    pct: 29 },
-    { ciudad: 'Cali',        pct: 42 },
-    { ciudad: 'Barranquilla',pct: 33 },
-    { ciudad: 'Bucaramanga', pct: 27 },
-    { ciudad: 'Caribe',      pct: 31 },
-  ];
+  get encuestasValidas(): number {
+    return this.encuestas.filter(
+      (poll) => (poll.sampleSize || 0) >= 1500 && (poll.marginError || 0) <= 3,
+    ).length;
+  }
 
-  // ── Encuestas recientes ─────────────────────────────────
-  encuestasRecientes = [
-    { firma: 'CNC – Centro Nacional', fecha: '2026-05-10', muestra: 1200, margen: '±2.8%', confianza: 95, estado: 'Validada'   },
-    { firma: 'Datexco',               fecha: '2026-05-08', muestra: 1500, margen: '±2.5%', confianza: 95, estado: 'Validada'   },
-    { firma: 'Invamer',               fecha: '2026-05-05', muestra: 1100, margen: '±3.0%', confianza: 90, estado: 'En revisión'},
-    { firma: 'Guarumo – EcoAnalítica',fecha: '2026-05-03', muestra: 900,  margen: '±3.3%', confianza: 90, estado: 'Validada'   },
-    { firma: 'Cifras & Conceptos',    fecha: '2026-04-28', muestra: 1050, margen: '±3.1%', confianza: 95, estado: 'En revisión'},
-  ];
+  get votosTotales(): number {
+    return this.resultados.reduce((sum, result) => sum + (result.votes || 0), 0);
+  }
 
-  // ── Tareas ──────────────────────────────────────────────
-  tareas = [
-    { icon: '⏱', iconClass: 'icon-red',    texto: 'Validar encuesta Invamer del 05/05',  prioridad: 'ALTA',  prioClass: 'prio-alta'  },
-    { icon: '🔮', iconClass: 'icon-red',    texto: 'Actualizar proyección 2da vuelta',    prioridad: 'ALTA',  prioClass: 'prio-alta'  },
-    { icon: '📄', iconClass: 'icon-orange', texto: 'Revisar datos Cifras & Conceptos',    prioridad: 'MEDIA', prioClass: 'prio-media' },
-    { icon: '📄', iconClass: 'icon-orange', texto: 'Generar reporte semanal para dirección',prioridad:'MEDIA',prioClass: 'prio-media' },
-    { icon: '📍', iconClass: 'icon-gray',   texto: 'Completar análisis regional Caribe',  prioridad: 'BAJA',  prioClass: 'prio-baja'  },
-  ];
+  get intencionActual() {
+    const latest = this.encuestas.at(-1);
+    return (latest?.results || [])
+      .map((result, index) => ({
+        nombre: result.candidate?.name || `Candidato ${index + 1}`,
+        pct: Math.round((result.percentage || 0) * 10) / 10,
+        colorClass: ['dot-green', 'dot-blue', 'dot-purple', 'dot-gray'][index % 4],
+      }))
+      .sort((a, b) => b.pct - a.pct);
+  }
+
+  get ultimaEncuesta(): Poll | undefined {
+    return this.encuestas.at(-1);
+  }
+
+  get regionData() {
+    const regions = new Map<string, { votes: number; candidates: Map<string, number> }>();
+    for (const result of this.resultados) {
+      const region = result.department || 'Sin región';
+      const item = regions.get(region) || { votes: 0, candidates: new Map<string, number>() };
+      item.votes += result.votes || 0;
+      const candidate = result.candidate?.name || 'Sin candidato';
+      item.candidates.set(candidate, (item.candidates.get(candidate) || 0) + (result.votes || 0));
+      regions.set(region, item);
+    }
+    const maxVotes = Math.max(1, ...[...regions.values()].map((item) => item.votes));
+    return [...regions.entries()]
+      .map(([region, item]) => ({
+        ciudad: region,
+        pct: Math.round((item.votes * 1000) / maxVotes) / 10,
+        votos: item.votes,
+        lider: [...item.candidates.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || 'Sin datos',
+      }))
+      .sort((a, b) => b.votos - a.votos)
+      .slice(0, 6);
+  }
+
+  get encuestasRecientes() {
+    return [...this.encuestas]
+      .reverse()
+      .slice(0, 5)
+      .map((poll) => ({
+        firma: poll.source,
+        fecha: poll.date,
+        muestra: poll.sampleSize,
+        margen: `±${poll.marginError}%`,
+        confianza: poll.marginError <= 2 ? 95 : poll.marginError <= 3 ? 90 : 80,
+        estado:
+          (poll.sampleSize || 0) >= 1500 && (poll.marginError || 0) <= 3
+            ? 'Validada'
+            : 'En revisión',
+      }));
+  }
+
+  get tareas() {
+    const tasks = [...this.encuestas]
+      .reverse()
+      .filter((poll) => (poll.sampleSize || 0) < 1500 || (poll.marginError || 0) > 3)
+      .slice(0, 4)
+      .map((poll) => ({
+        icon: '⚠',
+        iconClass: 'icon-orange',
+        texto: `Revisar encuesta ${poll.source} (${poll.date})`,
+        prioridad: 'MEDIA',
+        prioClass: 'prio-media',
+      }));
+    return tasks.length
+      ? tasks
+      : [
+          {
+            icon: '✔',
+            iconClass: 'icon-green',
+            texto: 'No hay encuestas pendientes de validación',
+            prioridad: 'OK',
+            prioClass: 'prio-baja',
+          },
+        ];
+  }
+
+  exportarResumen(): void {
+    this.reporteService.descargarResultados('pdf');
+  }
+
+  private buildTrend(): void {
+    const polls = this.encuestas.slice(-7);
+    if (!polls.length) {
+      this.series = [];
+      this.chartLabels = [];
+      return;
+    }
+
+    const latestNames = (polls.at(-1)?.results || [])
+      .slice()
+      .sort((a, b) => (b.percentage || 0) - (a.percentage || 0))
+      .slice(0, 3)
+      .map((result) => result.candidate?.name)
+      .filter((name): name is string => !!name);
+
+    const width = 620;
+    const startX = 60;
+    const step = polls.length > 1 ? width / (polls.length - 1) : 0;
+    this.chartLabels = polls.map((poll, index) => ({
+      label: new Date(`${poll.date}T00:00:00`).toLocaleDateString('es-CO', { month: 'short' }),
+      x: startX + step * index,
+    }));
+
+    const colors = ['#059669', '#3b82f6', '#8b5cf6'];
+    this.series = latestNames.map((name, seriesIndex) => {
+      const dots = polls.map((poll, index) => {
+        const value =
+          poll.results.find((result) => result.candidate?.name === name)?.percentage || 0;
+        return { x: startX + step * index, y: 200 - (value / 100) * 180 };
+      });
+      return {
+        name,
+        color: colors[seriesIndex],
+        points: dots.map((dot) => `${dot.x},${dot.y}`).join(' '),
+        dots,
+      };
+    });
+  }
+
+  private time(value?: string): number {
+    return value ? new Date(`${value}T00:00:00`).getTime() : 0;
+  }
 }

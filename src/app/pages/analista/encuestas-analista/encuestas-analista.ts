@@ -1,45 +1,122 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, inject } from '@angular/core';
+import { refreshView } from '../../../core/utils/zoneless-view.util';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { EncuestaService } from '../../../core/services/encuesta.service';
+import { Poll } from '../../../core/models/poll.model';
 
 @Component({
   selector: 'app-encuestas-analista',
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './encuestas-analista.html',
-  styleUrl: './encuestas-analista.scss'
+  styleUrl: './encuestas-analista.scss',
 })
-export class EncuestasAnalista {
-
+export class EncuestasAnalista implements OnInit {
+  private readonly cdr = inject(ChangeDetectorRef);
   busqueda = '';
+  encuestas: Poll[] = [];
+  error = '';
 
-  encuestas = [
-    { id: '#0001', fuente: 'Centro Nacional de Consultoría', fecha: '15 Mar 2026', muestra: 2500, margen: '±2%',   metodologia: 'Telefónica', estado: 'Aprobada'  },
-    { id: '#0002', fuente: 'Invamer',                         fecha: '18 Mar 2026', muestra: 3200, margen: '±1.8%', metodologia: 'Presencial', estado: 'Aprobada'  },
-    { id: '#0003', fuente: 'YanHaas',                         fecha: '20 Mar 2026', muestra: 2800, margen: '±1.9%', metodologia: 'Digital',    estado: 'Aprobada'  },
-    { id: '#0004', fuente: 'Cifras y Conceptos',              fecha: '12 Mar 2026', muestra: 2200, margen: '±2.1%', metodologia: 'Mixta',      estado: 'Aprobada'  },
-    { id: '#0005', fuente: 'Guarumo',                         fecha: '22 Mar 2026', muestra: 1800, margen: '±2.3%', metodologia: 'Telefónica', estado: 'Pendiente' },
-  ];
+  constructor(private readonly encuestaService: EncuestaService) {}
 
-  get encuestasFiltradas() { return this.encuestas.filter(e => e.fuente.toLowerCase().includes(this.busqueda.toLowerCase())); }
-  get aprobadas()      { return this.encuestas.filter(e => e.estado === 'Aprobada').length; }
-  get pendientes()     { return this.encuestas.filter(e => e.estado === 'Pendiente').length; }
-  get pctAprobadas()   { return Math.round(this.aprobadas / this.encuestas.length * 100 * 10) / 10; }
-  get muestraPromedio(){ return Math.round(this.encuestas.reduce((s, e) => s + e.muestra, 0) / this.encuestas.length); }
+  ngOnInit(): void {
+    this.cargar();
+  }
 
-  intencionVoto = [
-    { nombre: 'María Fernández',  pct: 36, colorClass: 'blue'   },
-    { nombre: 'Carlos Rodríguez', pct: 34, colorClass: 'red'    },
-    { nombre: 'Ana López',        pct: 18, colorClass: 'green'  },
-    { nombre: 'Pedro Gómez',      pct: 12, colorClass: 'orange' },
-  ];
+  cargar(): void {
+    this.encuestaService
+      .listar()
+      .pipe(refreshView(this.cdr))
+      .subscribe({
+        next: (data) => {
+          this.encuestas = [...data].sort((a, b) => this.time(b.date) - this.time(a.date));
+          this.error = '';
+        },
+        error: (error) => {
+          this.error = error?.error?.message || 'No se pudieron cargar las encuestas.';
+          console.error(error);
+        },
+      });
+  }
 
-  detallesMetod = [
-    { label: 'Fuente',              value: 'Centro Nacional de Consultoría' },
-    { label: 'Fecha de Realización',value: '15 Mar 2026'                   },
-    { label: 'Tamaño de Muestra',   value: '2500 personas'                 },
-    { label: 'Margen de Error',     value: '±2%'                           },
-    { label: 'Metodología',         value: 'Telefónica'                    },
-    { label: 'Nivel de Confianza',  value: '95%'                           },
-  ];
+  get encuestasFiltradas(): Poll[] {
+    const search = this.busqueda.trim().toLowerCase();
+    return this.encuestas.filter((poll) => !search || poll.source.toLowerCase().includes(search));
+  }
+
+  get aprobadas(): number {
+    return this.encuestas.filter((poll) => this.esValida(poll)).length;
+  }
+  get pendientes(): number {
+    return this.encuestas.length - this.aprobadas;
+  }
+  get pctAprobadas(): number {
+    return this.encuestas.length
+      ? Math.round((this.aprobadas * 1000) / this.encuestas.length) / 10
+      : 0;
+  }
+  get muestraPromedio(): number {
+    return this.encuestas.length
+      ? Math.round(
+          this.encuestas.reduce((sum, poll) => sum + (poll.sampleSize || 0), 0) /
+            this.encuestas.length,
+        )
+      : 0;
+  }
+
+  get intencionVoto() {
+    return (this.encuestas[0]?.results || []).map((result, index) => ({
+      nombre: result.candidate?.name || `Candidato ${index + 1}`,
+      pct: result.percentage || 0,
+      colorClass: ['blue', 'red', 'green', 'orange'][index % 4],
+    }));
+  }
+
+  get detallesMetod() {
+    const poll = this.encuestas[0];
+    return poll
+      ? [
+          { label: 'Fuente', value: poll.source },
+          { label: 'Fecha de Realización', value: poll.date },
+          { label: 'Tamaño de Muestra', value: `${poll.sampleSize} personas` },
+          { label: 'Margen de Error', value: `±${poll.marginError}%` },
+          { label: 'Metodología', value: poll.methodology },
+          { label: 'Candidatos medidos', value: String(poll.results.length) },
+        ]
+      : [];
+  }
+
+  estado(poll: Poll): string {
+    return this.esValida(poll) ? 'Aprobada' : 'En revisión';
+  }
+
+  exportarCsv(): void {
+    const header = ['id', 'source', 'date', 'sampleSize', 'marginError', 'methodology'];
+    const rows = this.encuestas.map((poll) => [
+      poll.id || '',
+      poll.source,
+      poll.date,
+      poll.sampleSize,
+      poll.marginError,
+      poll.methodology,
+    ]);
+    const csv = [header, ...rows]
+      .map((row) => row.map((value) => `"${String(value).replace(/"/g, '""')}"`).join(','))
+      .join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = 'encuestas.csv';
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }
+
+  private esValida(poll: Poll): boolean {
+    return (poll.sampleSize || 0) >= 1500 && (poll.marginError || 0) <= 3;
+  }
+  private time(value?: string): number {
+    return value ? new Date(`${value}T00:00:00`).getTime() : 0;
+  }
 }

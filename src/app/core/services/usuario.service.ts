@@ -4,7 +4,7 @@ import { Observable, map } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import { ApiResponse } from '../models/api-response.model';
-import { AppUser } from '../models/user.model';
+import { AppUser, UserRequest } from '../models/user.model';
 
 @Injectable({ providedIn: 'root' })
 export class UsuarioService {
@@ -20,11 +20,11 @@ export class UsuarioService {
     return this.http.get<ApiResponse<AppUser>>(`${this.apiUrl}/${id}`).pipe(map(r => r.data));
   }
 
-  crear(usuario: AppUser): Observable<AppUser> {
+  crear(usuario: UserRequest): Observable<AppUser> {
     return this.http.post<ApiResponse<AppUser>>(this.apiUrl, usuario).pipe(map(r => r.data));
   }
 
-  actualizar(id: number, usuario: AppUser): Observable<AppUser> {
+  actualizar(id: number, usuario: UserRequest): Observable<AppUser> {
     return this.http.put<ApiResponse<AppUser>>(`${this.apiUrl}/${id}`, usuario).pipe(map(r => r.data));
   }
 

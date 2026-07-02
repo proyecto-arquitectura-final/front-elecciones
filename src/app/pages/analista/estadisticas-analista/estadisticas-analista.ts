@@ -1,40 +1,176 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, inject } from '@angular/core';
+import { refreshView } from '../../../core/utils/zoneless-view.util';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { forkJoin } from 'rxjs';
+import { EncuestaService } from '../../../core/services/encuesta.service';
+import { PrediccionService } from '../../../core/services/prediccion.service';
+import { Poll } from '../../../core/models/poll.model';
+import { PredictionItem } from '../../../core/models/result.model';
 
 @Component({
   selector: 'app-estadisticas-analista',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule],
   templateUrl: './estadisticas-analista.html',
-  styleUrl: './estadisticas-analista.scss'
+  styleUrl: './estadisticas-analista.scss',
 })
-export class EstadisticasAnalista {
+export class EstadisticasAnalista implements OnInit {
+  private readonly cdr = inject(ChangeDetectorRef);
+  encuestas: Poll[] = [];
+  predicciones: PredictionItem[] = [];
+  error = '';
 
-  stats = [
-    { label: 'Variación promedio semanal (Petro)',  value: '±1.9 pp', trend: '↗ Baja volatilidad',  valueClass: '',       trendClass: 'trend-gray'   },
-    { label: 'Variación promedio semanal (Hdez.)',  value: '±2.7 pp', trend: '↗ Alta volatilidad',  valueClass: 'orange', trendClass: 'trend-orange' },
-    { label: 'Brecha líder-segundo',                value: '13 pp',   trend: '↗ Creciendo',         valueClass: '',       trendClass: 'trend-orange' },
-    { label: 'Indecisión declarada',                value: '8.3%',    trend: '↗ Bajando',           valueClass: '',       trendClass: 'trend-green'  },
-  ];
+  constructor(
+    private readonly encuestaService: EncuestaService,
+    private readonly prediccionService: PrediccionService,
+  ) {}
 
-  semanas = [
-    { label: 'S1', valor: 1.7  },
-    { label: 'S2', valor: 1.5  },
-    { label: 'S3', valor: 2.55 },
-    { label: 'S4', valor: 0.85 },
-    { label: 'S5', valor: 1.7  },
-    { label: 'S6', valor: 1.8  },
-    { label: 'S7', valor: 1.6  },
-    { label: 'S8', valor: 1.7  },
-  ];
+  ngOnInit(): void {
+    forkJoin({
+      encuestas: this.encuestaService.listar(),
+      predicciones: this.prediccionService.porEncuestas(),
+    })
+      .pipe(refreshView(this.cdr))
+      .subscribe({
+        next: (data) => {
+          this.encuestas = [...data.encuestas].sort(
+            (a, b) => this.time(a.date) - this.time(b.date),
+          );
+          this.predicciones = data.predicciones;
+        },
+        error: (error) => {
+          this.error = error?.error?.message || 'No se pudieron calcular las estadísticas.';
+          console.error(error);
+        },
+      });
+  }
 
-  gruposEtarios = [
-    { grupo: '18-25', pct: 48 },
-    { grupo: '26-35', pct: 40 },
-    { grupo: '36-45', pct: 33 },
-    { grupo: '46-55', pct: 28 },
-    { grupo: '56-65', pct: 23 },
-    { grupo: '65+',   pct: 18 },
-  ];
+  get promedioMargen(): number {
+    return this.encuestas.length
+      ? this.round(
+          this.encuestas.reduce((sum, poll) => sum + (poll.marginError || 0), 0) /
+            this.encuestas.length,
+        )
+      : 0;
+  }
+
+  get promedioMuestra(): number {
+    return this.encuestas.length
+      ? Math.round(
+          this.encuestas.reduce((sum, poll) => sum + (poll.sampleSize || 0), 0) /
+            this.encuestas.length,
+        )
+      : 0;
+  }
+
+  get brechaLider(): number {
+    const values = [...this.predicciones].sort(
+      (a, b) => b.projectedPercentage - a.projectedPercentage,
+    );
+    return values.length > 1
+      ? this.round(values[0].projectedPercentage - values[1].projectedPercentage)
+      : 0;
+  }
+
+  get stats() {
+    return [
+      {
+        label: 'Encuestas analizadas',
+        value: String(this.encuestas.length),
+        trend: 'Datos persistidos',
+        valueClass: '',
+        trendClass: 'trend-gray',
+      },
+      {
+        label: 'Muestra promedio',
+        value: this.promedioMuestra.toLocaleString('es-CO'),
+        trend: 'Personas por encuesta',
+        valueClass: '',
+        trendClass: 'trend-green',
+      },
+      {
+        label: 'Margen de error promedio',
+        value: `±${this.promedioMargen}%`,
+        trend: this.promedioMargen <= 3 ? 'Dentro del criterio' : 'Requiere revisión',
+        valueClass: this.promedioMargen <= 3 ? '' : 'orange',
+        trendClass: this.promedioMargen <= 3 ? 'trend-green' : 'trend-orange',
+      },
+      {
+        label: 'Brecha líder-segundo',
+        value: `${this.brechaLider} pp`,
+        trend: 'Proyección por encuestas',
+        valueClass: '',
+        trendClass: 'trend-gray',
+      },
+    ];
+  }
+
+  get seriesMargen() {
+    return this.encuestas
+      .slice(-8)
+      .map((poll, index) => ({
+        label: `E${index + 1}`,
+        valor: poll.marginError || 0,
+        fuente: poll.source,
+      }));
+  }
+
+  get intencion() {
+    return [...this.predicciones]
+      .sort((a, b) => b.projectedPercentage - a.projectedPercentage)
+      .map((item) => ({
+        nombre: item.candidate,
+        pct: this.round(item.projectedPercentage),
+        probabilidad: this.round(item.probability),
+        margen: this.round(item.uncertaintyMargin),
+      }));
+  }
+
+  get hallazgos() {
+    const leader = this.intencion[0];
+    const valid = this.encuestas.filter(
+      (poll) => (poll.sampleSize || 0) >= 1500 && (poll.marginError || 0) <= 3,
+    ).length;
+    return [
+      {
+        title: 'Calidad de encuestas',
+        detail: `${valid} de ${this.encuestas.length} cumplen muestra mínima y margen máximo.`,
+      },
+      {
+        title: 'Liderazgo proyectado',
+        detail: leader
+          ? `${leader.nombre} lidera con ${leader.pct}% proyectado.`
+          : 'No hay predicciones disponibles.',
+      },
+      {
+        title: 'Incertidumbre',
+        detail: leader
+          ? `El líder presenta un margen estimado de ±${leader.margen} puntos.`
+          : 'Sin información suficiente.',
+      },
+    ];
+  }
+
+  exportar(): void {
+    const payload = {
+      generatedAt: new Date().toISOString(),
+      stats: this.stats,
+      intention: this.intencion,
+      polls: this.encuestas,
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = 'analisis-electoral.json';
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }
+
+  private round(value: number): number {
+    return Math.round((value || 0) * 10) / 10;
+  }
+  private time(value?: string): number {
+    return value ? new Date(`${value}T00:00:00`).getTime() : 0;
+  }
 }

@@ -1,8 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, inject } from '@angular/core';
+import { refreshView } from '../../../core/utils/zoneless-view.util';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
-import { AppUser, UserRole } from '../../../core/models/user.model';
+import { AppUser, UserRequest, UserRole } from '../../../core/models/user.model';
 import { UsuarioService } from '../../../core/services/usuario.service';
 
 @Component({
@@ -10,9 +11,10 @@ import { UsuarioService } from '../../../core/services/usuario.service';
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './usuarios.html',
-  styleUrl: './usuarios.scss'
+  styleUrl: './usuarios.scss',
 })
 export class Usuarios implements OnInit {
+  private readonly cdr = inject(ChangeDetectorRef);
 
   busqueda = '';
   modalAbierto = false;
@@ -24,10 +26,34 @@ export class Usuarios implements OnInit {
   form: any = this.formVacio();
 
   stats = [
-    { label: 'Total Usuarios',  value: '0', sub: 'Registrados en el sistema', icon: '👥', iconClass: 'icon-blue'   },
-    { label: 'Activos',         value: '0', sub: 'Con acceso habilitado',      icon: '👤', iconClass: 'icon-green'  },
-    { label: 'Administradores', value: '0', sub: 'Permisos completos',         icon: '🛡', iconClass: 'icon-purple' },
-    { label: 'Analistas',       value: '0', sub: 'Lectura y escritura',        icon: '👤', iconClass: 'icon-orange' },
+    {
+      label: 'Total Usuarios',
+      value: '0',
+      sub: 'Registrados en el sistema',
+      icon: '👥',
+      iconClass: 'icon-blue',
+    },
+    {
+      label: 'Activos',
+      value: '0',
+      sub: 'Con acceso habilitado',
+      icon: '👤',
+      iconClass: 'icon-green',
+    },
+    {
+      label: 'Administradores',
+      value: '0',
+      sub: 'Permisos completos',
+      icon: '🛡',
+      iconClass: 'icon-purple',
+    },
+    {
+      label: 'Analistas',
+      value: '0',
+      sub: 'Lectura y escritura',
+      icon: '👤',
+      iconClass: 'icon-orange',
+    },
   ];
 
   usuarios: any[] = [];
@@ -37,13 +63,13 @@ export class Usuarios implements OnInit {
       nombre: 'Administrador',
       badge: 'Full Access',
       badgeClass: 'badge-full',
-      desc: 'Acceso completo al sistema: gestión de usuarios, configuración de elecciones, carga de resultados, generación de reportes y auditoría.'
+      desc: 'Acceso completo al sistema: gestión de usuarios, configuración de elecciones, carga de resultados, generación de reportes y auditoría.',
     },
     {
       nombre: 'Analista',
-      badge: 'Read & Write',
+      badge: 'Read Only',
       badgeClass: 'badge-rw',
-      desc: 'Puede consultar y apoyar el análisis de candidatos, partidos, encuestas, resultados, predicciones y reportes.'
+      desc: 'Puede consultar candidatos, partidos, encuestas, resultados, predicciones y descargar reportes.',
     },
   ];
 
@@ -56,10 +82,11 @@ export class Usuarios implements OnInit {
   get usuariosFiltrados() {
     const filtro = this.busqueda.toLowerCase().trim();
 
-    return this.usuarios.filter(u =>
-      !filtro ||
-      u.nombre.toLowerCase().includes(filtro) ||
-      u.correo.toLowerCase().includes(filtro)
+    return this.usuarios.filter(
+      (u) =>
+        !filtro ||
+        u.nombre.toLowerCase().includes(filtro) ||
+        u.correo.toLowerCase().includes(filtro),
     );
   }
 
@@ -67,18 +94,21 @@ export class Usuarios implements OnInit {
     this.cargando = true;
     this.error = '';
 
-    this.usuarioService.listar().subscribe({
-      next: data => {
-        this.usuarios = data.map(u => this.toView(u));
-        this.actualizarStats();
-        this.cargando = false;
-      },
-      error: err => {
-        this.error = err?.error?.message || 'No se pudieron cargar los usuarios.';
-        this.cargando = false;
-        console.error('Error cargando usuarios:', err);
-      }
-    });
+    this.usuarioService
+      .listar()
+      .pipe(refreshView(this.cdr))
+      .subscribe({
+        next: (data) => {
+          this.usuarios = data.map((u) => this.toView(u));
+          this.actualizarStats();
+          this.cargando = false;
+        },
+        error: (err) => {
+          this.error = err?.error?.message || 'No se pudieron cargar los usuarios.';
+          this.cargando = false;
+          console.error('Error cargando usuarios:', err);
+        },
+      });
   }
 
   abrirModal(u?: any): void {
@@ -94,7 +124,7 @@ export class Usuarios implements OnInit {
           rol: u.rol,
           rolClass: u.rolClass,
           activo: u.activo,
-          password: ''
+          password: '',
         }
       : this.formVacio();
 
@@ -115,8 +145,8 @@ export class Usuarios implements OnInit {
 
   actualizarRolClass(): void {
     const map: any = {
-      'Administrador': 'rol-admin',
-      'Analista': 'rol-analista'
+      Administrador: 'rol-admin',
+      Analista: 'rol-analista',
     };
 
     this.form.rolClass = map[this.form.rol] || '';
@@ -144,21 +174,22 @@ export class Usuarios implements OnInit {
       return;
     }
 
-    const request: AppUser = {
+    const request: UserRequest = {
       name: String(this.form.nombre).trim(),
       email: String(this.form.correo).trim(),
       password: this.form.password || undefined,
       role: this.toApiRole(this.form.rol),
-      active: this.form.activo
+      active: this.form.activo,
     };
 
     this.guardando = true;
 
-    const action$ = this.modoEdicion && this.form.id
-      ? this.usuarioService.actualizar(this.form.id, request)
-      : this.usuarioService.crear(request);
+    const action$ =
+      this.modoEdicion && this.form.id
+        ? this.usuarioService.actualizar(this.form.id, request)
+        : this.usuarioService.crear(request);
 
-    action$.subscribe({
+    action$.pipe(refreshView(this.cdr)).subscribe({
       next: () => {
         this.guardando = false;
         this.modalAbierto = false;
@@ -167,11 +198,11 @@ export class Usuarios implements OnInit {
         this.error = '';
         this.cargarUsuarios();
       },
-      error: err => {
+      error: (err) => {
         this.guardando = false;
         this.error = err?.error?.message || 'No se pudo guardar el usuario.';
         console.error('Error guardando usuario:', err);
-      }
+      },
     });
   }
 
@@ -181,21 +212,24 @@ export class Usuarios implements OnInit {
     }
 
     if (confirm(`¿Eliminar usuario "${u.nombre}"?`)) {
-      this.usuarioService.eliminar(u.id).subscribe({
-        next: () => this.cargarUsuarios(),
-        error: err => {
-          this.error = err?.error?.message || 'No se pudo eliminar el usuario.';
-          console.error('Error eliminando usuario:', err);
-        }
-      });
+      this.usuarioService
+        .eliminar(u.id)
+        .pipe(refreshView(this.cdr))
+        .subscribe({
+          next: () => this.cargarUsuarios(),
+          error: (err) => {
+            this.error = err?.error?.message || 'No se pudo eliminar el usuario.';
+            console.error('Error eliminando usuario:', err);
+          },
+        });
     }
   }
 
   private actualizarStats(): void {
     this.stats[0].value = String(this.usuarios.length);
-    this.stats[1].value = String(this.usuarios.filter(u => u.activo).length);
-    this.stats[2].value = String(this.usuarios.filter(u => u.rol === 'Administrador').length);
-    this.stats[3].value = String(this.usuarios.filter(u => u.rol === 'Analista').length);
+    this.stats[1].value = String(this.usuarios.filter((u) => u.activo).length);
+    this.stats[2].value = String(this.usuarios.filter((u) => u.rol === 'Administrador').length);
+    this.stats[3].value = String(this.usuarios.filter((u) => u.rol === 'Analista').length);
   }
 
   private toView(u: AppUser): any {
@@ -209,7 +243,7 @@ export class Usuarios implements OnInit {
       rolClass: rol === 'Administrador' ? 'rol-admin' : 'rol-analista',
       ultimoAcceso: 'No registrado',
       activo: u.active,
-      password: ''
+      password: '',
     };
   }
 
@@ -229,7 +263,7 @@ export class Usuarios implements OnInit {
       rol: '',
       rolClass: '',
       activo: true,
-      password: ''
+      password: '',
     };
   }
 }

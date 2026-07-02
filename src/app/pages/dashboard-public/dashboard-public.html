@@ -23,6 +23,10 @@
   </div>
 </nav>
 
+<div class="demo-data-banner" *ngIf="datosDemostrativos && vistaActiva !== 'asistente'">
+  Los resultados y predicciones de esta vista son demostrativos. El asistente sí consulta el backend en tiempo real.
+</div>
+
 <!-- ===================== VISTA: RESULTADOS ===================== -->
 <main class="main-content" *ngIf="vistaActiva === 'resultados'">
 

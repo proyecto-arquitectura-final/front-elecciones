@@ -1,1 +1,58 @@
 @use '../admin-shared' as *;
+
+.header-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.file-button {
+  cursor: pointer;
+}
+
+.file-button input {
+  display: none;
+}
+
+.alert-success {
+  color: #166534;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.result-editor {
+  margin-top: 10px;
+  padding: 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.result-editor-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.form-help {
+  margin-top: 4px;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.result-row {
+  align-items: end;
+  margin-bottom: 8px;
+}
+
+.percentage-field {
+  max-width: 180px;
+}
+
+.remove-result {
+  margin-bottom: 2px;
+}

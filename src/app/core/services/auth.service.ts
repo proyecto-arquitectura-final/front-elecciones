@@ -6,6 +6,7 @@ import { Observable, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ApiResponse } from '../models/api-response.model';
 import { LoginData, LoginRequest } from '../models/auth.model';
+import { clearStoredSession, isTokenExpired, roleFromToken } from '../utils/session.util';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -23,13 +24,8 @@ export class AuthService {
   }
 
   logout(): void {
-    localStorage.removeItem('token');
-    localStorage.removeItem('tokenType');
-    localStorage.removeItem('userId');
-    localStorage.removeItem('name');
-    localStorage.removeItem('email');
-    localStorage.removeItem('role');
-    this.router.navigate(['/login']);
+    clearStoredSession();
+    void this.router.navigate(['/login']);
   }
 
   saveSession(data: LoginData): void {
@@ -42,11 +38,20 @@ export class AuthService {
   }
 
   getToken(): string | null {
-    return localStorage.getItem('token');
+    const token = localStorage.getItem('token');
+    if (!token) return null;
+
+    if (isTokenExpired(token)) {
+      clearStoredSession();
+      return null;
+    }
+
+    return token;
   }
 
   getRole(): string | null {
-    return localStorage.getItem('role');
+    const token = this.getToken();
+    return token ? roleFromToken(token) || localStorage.getItem('role') : null;
   }
 
   getName(): string {
@@ -54,7 +59,7 @@ export class AuthService {
   }
 
   isLoggedIn(): boolean {
-    return !!this.getToken();
+    return this.getToken() !== null;
   }
 
   hasRole(roles: string[]): boolean {

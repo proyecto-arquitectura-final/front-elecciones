@@ -1,45 +1,142 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, inject } from '@angular/core';
+import { refreshView } from '../../../core/utils/zoneless-view.util';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { ResultadoService } from '../../../core/services/resultado.service';
+import { ReporteService } from '../../../core/services/reporte.service';
+import { OfficialResult } from '../../../core/models/result.model';
 
 @Component({
   selector: 'app-resultados-analista',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './resultados-analista.html',
-  styleUrl: './resultados-analista.scss'
+  styleUrl: './resultados-analista.scss',
 })
-export class ResultadosAnalista {
+export class ResultadosAnalista implements OnInit {
+  private readonly cdr = inject(ChangeDetectorRef);
+  resultados: OfficialResult[] = [];
+  filtroDepartamento = '';
+  error = '';
 
-  stats = [
-    { label: 'Mesas Procesadas', value: 88245, sub: '89.5% del total',    pct: 89.5, icon: '✔', iconClass: 'icon-green',  valueClass: '',       fillClass: 'fill-green'  },
-    { label: 'En Proceso',       value: 3824,  sub: 'Siendo validadas',   pct: 4,    icon: '⏱', iconClass: 'icon-blue',   valueClass: '',       fillClass: 'fill-blue'   },
-    { label: 'Con Errores',      value: 245,   sub: 'Requieren revisión', pct: 0.3,  icon: '⚠', iconClass: 'icon-red',    valueClass: 'red',    fillClass: 'fill-red'    },
-    { label: 'Pendientes',       value: 6286,  sub: 'Sin reportar',       pct: 6.4,  icon: '⏳', iconClass: 'icon-orange', valueClass: 'orange', fillClass: 'fill-orange' },
-  ];
+  constructor(
+    private readonly resultadoService: ResultadoService,
+    private readonly reporteService: ReporteService,
+  ) {}
 
-  mesas = [
-    { mesa: 'Mesa #45782', departamento: 'Bogotá D.C.', municipio: 'Bogotá',   votos: 450, hora: '14:32', estado: 'Procesado',  validacion: 'Aprobado'  },
-    { mesa: 'Mesa #45783', departamento: 'Bogotá D.C.', municipio: 'Bogotá',   votos: 478, hora: '14:35', estado: 'Procesado',  validacion: 'Aprobado'  },
-    { mesa: 'Mesa #45784', departamento: 'Bogotá D.C.', municipio: 'Bogotá',   votos: 412, hora: '14:38', estado: 'Procesando', validacion: 'Pendiente' },
-    { mesa: 'Mesa #23456', departamento: 'Antioquia',   municipio: 'Medellín', votos: 523, hora: '14:25', estado: 'Procesado',  validacion: 'Aprobado'  },
-    { mesa: 'Mesa #23457', departamento: 'Antioquia',   municipio: 'Medellín', votos: 0,   hora: '14:40', estado: 'Error',      validacion: 'Rechazado' },
-  ];
-
-  cargaOpciones = [
-    { icon: '⬆', iconClass: 'icon-blue',   titulo: 'Importar CSV',         sub: 'Cargar resultados desde archivo'  },
-    { icon: '🔄', iconClass: 'icon-green',  titulo: 'API Registraduría',    sub: 'Sincronizar automáticamente'      },
-    { icon: '⬇', iconClass: 'icon-purple', titulo: 'Exportar Consolidado', sub: 'Descargar todos los resultados'   },
-  ];
-
-  getEstadoClass(e: string) {
-    if (e === 'Procesado')  return 'badge-procesado';
-    if (e === 'Procesando') return 'badge-procesando';
-    return 'badge-error';
+  ngOnInit(): void {
+    this.cargar();
   }
 
-  getValidClass(v: string) {
-    if (v === 'Aprobado')  return 'valid-green';
-    if (v === 'Pendiente') return 'valid-orange';
-    return 'valid-red';
+  cargar(): void {
+    this.resultadoService
+      .listar()
+      .pipe(refreshView(this.cdr))
+      .subscribe({
+        next: (data) => {
+          this.resultados = [...data].sort(
+            (a, b) =>
+              this.time(b.importedAt || b.createdAt) - this.time(a.importedAt || a.createdAt),
+          );
+          this.error = '';
+        },
+        error: (error) => {
+          this.error = error?.error?.message || 'No se pudieron cargar los resultados.';
+          console.error(error);
+        },
+      });
+  }
+
+  get departamentos(): string[] {
+    return [...new Set(this.resultados.map((r) => r.department).filter(Boolean))].sort();
+  }
+
+  get resultadosFiltrados(): OfficialResult[] {
+    return this.filtroDepartamento
+      ? this.resultados.filter((r) => r.department === this.filtroDepartamento)
+      : this.resultados;
+  }
+
+  get votosTotales(): number {
+    return this.resultadosFiltrados.reduce((sum, r) => sum + (r.votes || 0), 0);
+  }
+  get mesasReportadas(): number {
+    return this.territorios.reduce((sum, item) => sum + item.reported, 0);
+  }
+  get mesasTotales(): number {
+    return this.territorios.reduce((sum, item) => sum + item.total, 0);
+  }
+  get pendientes(): number {
+    return Math.max(0, this.mesasTotales - this.mesasReportadas);
+  }
+  get porcentajeMesas(): number {
+    return this.mesasTotales
+      ? Math.round((this.mesasReportadas * 1000) / this.mesasTotales) / 10
+      : 0;
+  }
+
+  get stats() {
+    return [
+      {
+        label: 'Mesas Reportadas',
+        value: this.mesasReportadas,
+        sub: `${this.porcentajeMesas}% del total`,
+        pct: this.porcentajeMesas,
+        icon: '✔',
+        iconClass: 'icon-green',
+        valueClass: '',
+        fillClass: 'fill-green',
+      },
+      {
+        label: 'Mesas Pendientes',
+        value: this.pendientes,
+        sub: 'Según total territorial',
+        pct: this.mesasTotales ? (this.pendientes * 100) / this.mesasTotales : 0,
+        icon: '⏳',
+        iconClass: 'icon-orange',
+        valueClass: 'orange',
+        fillClass: 'fill-orange',
+      },
+      {
+        label: 'Votos Consolidados',
+        value: this.votosTotales,
+        sub: 'Suma de resultados',
+        pct: 100,
+        icon: '🗳',
+        iconClass: 'icon-blue',
+        valueClass: '',
+        fillClass: 'fill-blue',
+      },
+      {
+        label: 'Registros',
+        value: this.resultadosFiltrados.length,
+        sub: 'Filas oficiales',
+        pct: 100,
+        icon: '📄',
+        iconClass: 'icon-purple',
+        valueClass: '',
+        fillClass: 'fill-green',
+      },
+    ];
+  }
+
+  descargar(format: 'pdf' | 'csv' | 'json'): void {
+    this.reporteService.descargarResultados(format);
+  }
+
+  private get territorios(): Array<{ reported: number; total: number }> {
+    const map = new Map<string, { reported: number; total: number }>();
+    for (const result of this.resultadosFiltrados) {
+      const key = `${result.election?.id || result.electionId || 0}|${result.department}|${result.municipality}`;
+      const current = map.get(key) || { reported: 0, total: 0 };
+      current.reported = Math.max(current.reported, result.reportedTables || 0);
+      current.total = Math.max(current.total, result.totalTables || 0);
+      map.set(key, current);
+    }
+    return [...map.values()];
+  }
+
+  private time(value?: string): number {
+    return value ? new Date(value).getTime() : 0;
   }
 }

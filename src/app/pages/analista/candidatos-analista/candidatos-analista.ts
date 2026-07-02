@@ -1,43 +1,121 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, inject } from '@angular/core';
+import { refreshView } from '../../../core/utils/zoneless-view.util';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { forkJoin } from 'rxjs';
+import { CandidatoService } from '../../../core/services/candidato.service';
+import { ResultadoService } from '../../../core/services/resultado.service';
+
+interface CandidateView {
+  id: string;
+  nombre: string;
+  partido: string;
+  partidoClass: string;
+  tipo: string;
+  tipoClass: string;
+  territorio: string;
+  votos: number;
+  activo: boolean;
+}
 
 @Component({
   selector: 'app-candidatos-analista',
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './candidatos-analista.html',
-  styleUrl: './candidatos-analista.scss'
+  styleUrl: './candidatos-analista.scss',
 })
-export class CandidatosAnalista {
-
-  busqueda  = '';
+export class CandidatosAnalista implements OnInit {
+  private readonly cdr = inject(ChangeDetectorRef);
+  busqueda = '';
   filtroTipo = '';
+  candidatos: CandidateView[] = [];
+  error = '';
 
-  candidatos = [
-    { id: '#0001', nombre: 'María Fernández',  partido: 'Partido Liberal',    partidoClass: 'liberal',  tipo: 'Presidencia', tipoClass: 'tipo-pres',  territorio: 'Nacional',    votos: 4250000 },
-    { id: '#0002', nombre: 'Carlos Rodríguez', partido: 'Centro Democrático', partidoClass: 'centro',   tipo: 'Presidencia', tipoClass: 'tipo-pres',  territorio: 'Nacional',    votos: 3890000 },
-    { id: '#0003', nombre: 'Ana López',        partido: 'Pacto Histórico',    partidoClass: 'pacto',    tipo: 'Presidencia', tipoClass: 'tipo-pres',  territorio: 'Nacional',    votos: 1980000 },
-    { id: '#0004', nombre: 'Pedro Gómez',      partido: 'Cambio Radical',     partidoClass: 'cambio',   tipo: 'Presidencia', tipoClass: 'tipo-pres',  territorio: 'Nacional',    votos:  920000 },
-    { id: '#0005', nombre: 'Roberto Martínez', partido: 'Partido Liberal',    partidoClass: 'liberal',  tipo: 'Senado',      tipoClass: 'tipo-sen',   territorio: 'Nacional',    votos:  580000 },
-    { id: '#0006', nombre: 'Laura Sánchez',    partido: 'Verde',              partidoClass: 'verde',    tipo: 'Senado',      tipoClass: 'tipo-sen',   territorio: 'Nacional',    votos:  425000 },
-    { id: '#0007', nombre: 'Diego Vargas',     partido: 'Centro Democrático', partidoClass: 'centro',   tipo: 'Cámara',      tipoClass: 'tipo-cam',   territorio: 'Antioquia',   votos:  180000 },
-    { id: '#0008', nombre: 'Carmen Torres',    partido: 'Pacto Histórico',    partidoClass: 'pacto',    tipo: 'Cámara',      tipoClass: 'tipo-cam',   territorio: 'Bogotá D.C.', votos:  220000 },
-  ];
+  constructor(
+    private readonly candidatoService: CandidatoService,
+    private readonly resultadoService: ResultadoService,
+  ) {}
 
-  get candidatosFiltrados() {
-    return this.candidatos.filter(c => {
-      const matchB = c.nombre.toLowerCase().includes(this.busqueda.toLowerCase()) ||
-                     c.partido.toLowerCase().includes(this.busqueda.toLowerCase());
-      const matchT = !this.filtroTipo || c.tipo === this.filtroTipo;
-      return matchB && matchT;
+  ngOnInit(): void {
+    this.cargar();
+  }
+
+  cargar(): void {
+    forkJoin({
+      candidatos: this.candidatoService.listar(),
+      resultados: this.resultadoService.listar(),
+    })
+      .pipe(refreshView(this.cdr))
+      .subscribe({
+        next: (data) => {
+          const votes = new Map<number, number>();
+          data.resultados.forEach((result) => {
+            const id = result.candidate?.id || result.candidateId;
+            if (id) votes.set(id, (votes.get(id) || 0) + (result.votes || 0));
+          });
+
+          this.candidatos = data.candidatos.map((candidate, index) => ({
+            id: `#${String(candidate.id || 0).padStart(4, '0')}`,
+            nombre: candidate.name,
+            partido: candidate.party?.name || 'Sin partido',
+            partidoClass: ['liberal', 'centro', 'pacto', 'cambio', 'verde'][index % 5],
+            tipo: this.formatType(candidate.electionType),
+            tipoClass:
+              candidate.electionType === 'PRESIDENCIA'
+                ? 'tipo-pres'
+                : candidate.electionType === 'SENADO'
+                  ? 'tipo-sen'
+                  : 'tipo-cam',
+            territorio:
+              candidate.electionType === 'CAMARA'
+                ? [candidate.municipality, candidate.department].filter(Boolean).join(', ') ||
+                  'Regional'
+                : 'Nacional',
+            votos: candidate.id ? votes.get(candidate.id) || 0 : 0,
+            activo: candidate.active,
+          }));
+          this.error = '';
+        },
+        error: (error) => {
+          this.error = error?.error?.message || 'No se pudieron cargar los candidatos.';
+          console.error(error);
+        },
+      });
+  }
+
+  get candidatosFiltrados(): CandidateView[] {
+    const search = this.busqueda.trim().toLowerCase();
+    return this.candidatos.filter((candidate) => {
+      const matchSearch =
+        !search ||
+        candidate.nombre.toLowerCase().includes(search) ||
+        candidate.partido.toLowerCase().includes(search);
+      return matchSearch && (!this.filtroTipo || candidate.tipo === this.filtroTipo);
     });
   }
 
+  get totalPresidencia(): number {
+    return this.candidatos.filter((c) => c.tipo === 'Presidencia').length;
+  }
+  get totalSenado(): number {
+    return this.candidatos.filter((c) => c.tipo === 'Senado').length;
+  }
+  get totalCamara(): number {
+    return this.candidatos.filter((c) => c.tipo === 'Cámara').length;
+  }
+
   get distribucion() {
-    const map: any = {};
-    this.candidatos.forEach(c => { map[c.partido] = (map[c.partido] || 0) + 1; });
-    return Object.entries(map).map(([partido, count]) => ({ partido, count: count as number }))
+    const map = new Map<string, number>();
+    this.candidatos.forEach((candidate) =>
+      map.set(candidate.partido, (map.get(candidate.partido) || 0) + 1),
+    );
+    return [...map.entries()]
+      .map(([partido, count]) => ({ partido, count }))
       .sort((a, b) => b.count - a.count);
+  }
+
+  private formatType(type: string): string {
+    return type === 'CAMARA' ? 'Cámara' : type.charAt(0) + type.slice(1).toLowerCase();
   }
 }

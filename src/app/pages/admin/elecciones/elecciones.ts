@@ -1,17 +1,24 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, inject } from '@angular/core';
+import { refreshView } from '../../../core/utils/zoneless-view.util';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { EleccionService } from '../../../core/services/eleccion.service';
-import { Election, ElectionRound, ElectionState, ElectionType } from '../../../core/models/election.model';
+import {
+  Election,
+  ElectionRound,
+  ElectionState,
+  ElectionType,
+} from '../../../core/models/election.model';
 
 @Component({
   selector: 'app-elecciones',
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './elecciones.html',
-  styleUrl: './elecciones.scss'
+  styleUrl: './elecciones.scss',
 })
 export class Elecciones implements OnInit {
+  private readonly cdr = inject(ChangeDetectorRef);
 
   modalAbierto = false;
   modoEdicion = false;
@@ -23,18 +30,18 @@ export class Elecciones implements OnInit {
     {
       icon: '🗳',
       titulo: 'Iniciar Conteo',
-      descripcion: 'Activar recepción de resultados'
+      descripcion: 'Activar recepción de resultados',
     },
     {
       icon: '⚙',
       titulo: 'Configurar Mesas',
-      descripcion: 'Asignar puestos de votación'
+      descripcion: 'Asignar puestos de votación',
     },
     {
       icon: '📅',
       titulo: 'Programar Segunda Vuelta',
-      descripcion: 'Configurar balotaje'
-    }
+      descripcion: 'Configurar balotaje',
+    },
   ];
 
   constructor(private readonly eleccionService: EleccionService) {}
@@ -44,25 +51,26 @@ export class Elecciones implements OnInit {
   }
 
   cargar(): void {
-    this.eleccionService.listar().subscribe({
-      next: data => {
-        this.elecciones = data;
-      },
-      error: e => {
-        this.error = 'No se pudieron cargar las elecciones';
-        console.error(e);
-      }
-    });
+    this.eleccionService
+      .listar()
+      .pipe(refreshView(this.cdr))
+      .subscribe({
+        next: (data) => {
+          this.elecciones = data;
+        },
+        error: (e) => {
+          this.error = 'No se pudieron cargar las elecciones';
+          console.error(e);
+        },
+      });
   }
 
   get activas(): number {
-    return this.elecciones.filter(e =>
-      e.state === 'ABIERTA' || e.state === 'EN_CONTEO'
-    ).length;
+    return this.elecciones.filter((e) => e.state === 'ABIERTA' || e.state === 'EN_CONTEO').length;
   }
 
   get programadas(): number {
-    return this.elecciones.filter(e => e.state === 'CONFIGURADA').length;
+    return this.elecciones.filter((e) => e.state === 'CONFIGURADA').length;
   }
 
   abrirModal(e?: Election): void {
@@ -76,7 +84,7 @@ export class Elecciones implements OnInit {
           tipo: this.toVistaTipo(e.type),
           ronda: this.toVistaRonda(e.round),
           fecha: e.electionDate,
-          estado: this.toVistaEstado(e.state)
+          estado: this.toVistaEstado(e.state),
         }
       : this.formVacio();
 
@@ -100,22 +108,23 @@ export class Elecciones implements OnInit {
       type: this.toApiTipo(this.form.tipo),
       round: this.toApiRonda(this.form.ronda),
       electionDate: this.form.fecha,
-      state: this.toApiEstado(this.form.estado)
+      state: this.toApiEstado(this.form.estado),
     };
 
-    const obs = this.modoEdicion && this.form.id
-      ? this.eleccionService.actualizar(this.form.id, req)
-      : this.eleccionService.crear(req);
+    const obs =
+      this.modoEdicion && this.form.id
+        ? this.eleccionService.actualizar(this.form.id, req)
+        : this.eleccionService.crear(req);
 
-    obs.subscribe({
+    obs.pipe(refreshView(this.cdr)).subscribe({
       next: () => {
         this.cerrarModal();
         this.cargar();
       },
-      error: e => {
+      error: (e) => {
         this.error = e?.error?.message || 'No se pudo guardar la elección';
         console.error(e);
-      }
+      },
     });
   }
 
@@ -124,13 +133,16 @@ export class Elecciones implements OnInit {
       return;
     }
 
-    this.eleccionService.eliminar(e.id).subscribe({
-      next: () => this.cargar(),
-      error: x => {
-        this.error = x?.error?.message || 'No se pudo eliminar';
-        console.error(x);
-      }
-    });
+    this.eleccionService
+      .eliminar(e.id)
+      .pipe(refreshView(this.cdr))
+      .subscribe({
+        next: () => this.cargar(),
+        error: (x) => {
+          this.error = x?.error?.message || 'No se pudo eliminar';
+          console.error(x);
+        },
+      });
   }
 
   toVistaTipo(t?: string): string {
@@ -275,7 +287,7 @@ export class Elecciones implements OnInit {
       tipo: '',
       ronda: 'Primera Vuelta',
       fecha: '',
-      estado: 'Programada'
+      estado: 'Programada',
     };
   }
 }

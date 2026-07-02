@@ -1,109 +1,14 @@
-<div class="page-header">
-  <div>
-    <h1>Estadísticas Avanzadas</h1>
-    <p>Análisis estadístico profundo · Datos consolidados al 15/05/2026</p>
-  </div>
-  <button class="btn-primary-green">⬇ Exportar Análisis</button>
-</div>
+<div class="page-header"><div><h1>Estadísticas Avanzadas</h1><p>Análisis calculado con encuestas y predicciones del backend</p></div><button class="btn-primary-green" (click)="exportar()">⬇ Exportar Análisis</button></div>
+<p *ngIf="error" class="alert-error">{{ error }}</p>
 
-<div class="stats-grid">
-  <div class="stat-card" *ngFor="let s of stats">
-    <div class="stat-label">{{ s.label }}</div>
-    <div class="stat-value" [ngClass]="s.valueClass">{{ s.value }}</div>
-    <div class="stat-trend" [ngClass]="s.trendClass">{{ s.trend }}</div>
-  </div>
-</div>
+<div class="stats-grid"><div class="stat-card" *ngFor="let s of stats"><div class="stat-label">{{ s.label }}</div><div class="stat-value" [ngClass]="s.valueClass">{{ s.value }}</div><div class="stat-trend" [ngClass]="s.trendClass">{{ s.trend }}</div></div></div>
 
 <div class="card">
-  <div class="card-header">
-    <div>
-      <h3>Volatilidad Semanal (puntos porcentuales)</h3>
-      <p class="card-sub">Variación absoluta semana a semana por candidato</p>
-    </div>
-    <span class="info-badge">ℹ Mayor volatilidad = mayor incertidumbre</span>
-  </div>
-  <div class="vol-chart">
-    <div class="vol-y">
-      <span>3.4 pp</span><span>2.55 pp</span><span>1.7 pp</span><span>0.85 pp</span><span>0 pp</span>
-    </div>
-    <div class="vol-bars">
-      <div class="vol-group" *ngFor="let s of semanas">
-        <div class="vol-bar" [style.height]="(s.valor / 3.4 * 160) + 'px'"></div>
-        <span class="vol-label">{{ s.label }}</span>
-      </div>
-    </div>
-  </div>
-  <div class="chart-legend-row">
-    <span class="legend-sq green-sq"></span> Petro
-    <span class="legend-sq blue-sq"  style="margin-left:12px"></span> Hernández
-    <span class="legend-sq purple-sq"style="margin-left:12px"></span> Fajardo
-  </div>
-</div>
-
-<div class="card">
-  <div class="card-header">
-    <div>
-      <h3>Intención de Voto por Grupo Etario</h3>
-      <p class="card-sub">Distribución demográfica de preferencia electoral</p>
-    </div>
-    <select class="filter-select"><option>Por Edad</option></select>
-  </div>
-  <div class="hbar-chart">
-    <div class="hbar-item" *ngFor="let g of gruposEtarios">
-      <span class="hbar-label">{{ g.grupo }}</span>
-      <div class="hbar-track">
-        <div class="hbar-fill" [style.width]="g.pct + '%'"></div>
-      </div>
-    </div>
-    <div class="hbar-x-labels">
-      <span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span>
-    </div>
-  </div>
-  <div class="chart-legend-row">
-    <span class="legend-sq green-sq"></span> Petro
-    <span class="legend-sq blue-sq"  style="margin-left:12px"></span> Hernández
-    <span class="legend-sq purple-sq"style="margin-left:12px"></span> Fajardo
-    <span class="legend-sq gray-sq"  style="margin-left:12px"></span> Otros
-  </div>
+  <div class="card-header"><div><h3>Margen de Error de Encuestas Recientes</h3><p class="card-sub">Últimas {{ seriesMargen.length }} encuestas disponibles</p></div><span class="info-badge">ℹ Menor valor = mayor precisión</span></div>
+  <div class="vol-chart"><div class="vol-y"><span>4 pp</span><span>3 pp</span><span>2 pp</span><span>1 pp</span><span>0 pp</span></div><div class="vol-bars"><div class="vol-group" *ngFor="let s of seriesMargen" [title]="s.fuente"><div class="vol-bar" [style.height]="(s.valor / 4 * 160) + 'px'"></div><span class="vol-label">{{ s.label }}</span></div></div></div>
 </div>
 
 <div class="two-col">
-  <div class="card">
-    <h3>Correlación: Alfabetización vs Intención de Voto</h3>
-    <p class="card-sub">Tasa de alfabetización (%) vs % intención · Tamaño = muestra de encuesta</p>
-    <div class="scatter-wrap">
-      <div class="scatter-y">
-        <span>60%</span><span>45%</span><span>30%</span><span>15%</span><span>0%</span>
-      </div>
-      <div class="scatter-area">
-        <div class="scatter-x-labels">
-          <span>85%</span><span>72%</span><span>60%</span><span>55%</span><span>80%</span><span>45%</span><span>50%</span>
-        </div>
-        <div class="scatter-dot dot-green"  style="left:10%; top:35%"></div>
-        <div class="scatter-dot dot-green2" style="left:12%; top:40%"></div>
-        <div class="scatter-dot dot-blue"   style="left:14%; top:45%"></div>
-        <div class="scatter-dot dot-blue2"  style="left:13%; top:50%"></div>
-        <div class="scatter-dot dot-purple" style="left:11%; top:55%"></div>
-        <div class="scatter-dot dot-gray"   style="left:15%; top:62%"></div>
-      </div>
-    </div>
-  </div>
-
-  <div class="card">
-    <h3>Hallazgos Estadísticos</h3>
-    <div class="hallazgos-list">
-      <div class="hallazgo green">
-        <div class="hall-title">↑ Correlación positiva Petro-urbanismo</div>
-        <div class="hall-desc">En municipios con índice urbano >70%, la intención hacia Petro supera el promedio nacional en 6.2 pp.</div>
-      </div>
-      <div class="hallazgo orange">
-        <div class="hall-title">⚠ Alta volatilidad Hernández</div>
-        <div class="hall-desc">El candidato presenta la mayor variación semanal (±2.7 pp), lo que indica un voto blando susceptible a coyuntura.</div>
-      </div>
-      <div class="hallazgo green2">
-        <div class="hall-title">↑ Brecha generacional significativa</div>
-        <div class="hall-desc">En el grupo 18-35 la preferencia por Petro supera en 18 pp su resultado entre mayores de 55.</div>
-      </div>
-    </div>
-  </div>
+  <div class="card"><h3>Proyección por Encuestas</h3><div class="hbar-chart"><div class="hbar-item" *ngFor="let item of intencion"><span class="hbar-label">{{ item.nombre }}</span><div class="hbar-track"><div class="hbar-fill" [style.width]="item.pct + '%' "></div></div><strong>{{ item.pct }}%</strong></div></div></div>
+  <div class="card"><h3>Hallazgos Calculados</h3><div class="hallazgos-list"><div class="hallazgo green" *ngFor="let item of hallazgos"><div class="hall-title">{{ item.title }}</div><div class="hall-desc">{{ item.detail }}</div></div></div></div>
 </div>

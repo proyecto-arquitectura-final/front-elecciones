@@ -8,7 +8,7 @@ import { AuthService } from '../../../core/services/auth.service';
   standalone: true,
   imports: [RouterModule],
   templateUrl: './analista-layout.html',
-  styleUrl: './analista-layout.scss'
+  styleUrl: './analista-layout.scss',
 })
 export class AnalistaLayout {
   get nombreUsuario(): string {
