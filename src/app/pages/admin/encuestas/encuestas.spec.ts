@@ -192,4 +192,34 @@ describe('Encuestas', () => {
       size: 20,
     });
   });
+  it('keeps text and select controls interactive inside the mobile editor', () => {
+    component.openModal();
+    fixture.detectChanges();
+
+    const source = fixture.nativeElement.querySelector('#poll-source') as HTMLInputElement;
+    source.value = 'Firma móvil';
+    source.dispatchEvent(new Event('input', { bubbles: true }));
+
+    const status = fixture.nativeElement.querySelector('#poll-status') as HTMLSelectElement;
+    status.selectedIndex = 1;
+    status.dispatchEvent(new Event('change', { bubbles: true }));
+
+    fixture.detectChanges();
+
+    expect(component.form.source).toBe('Firma móvil');
+    expect(component.form.status).toBe('APROBADA');
+    expect(source.disabled).toBe(false);
+    expect(status.disabled).toBe(false);
+  });
+
+  it('does not close the editor when the dialog itself receives a click', () => {
+    component.openModal();
+    fixture.detectChanges();
+
+    const dialog = fixture.nativeElement.querySelector('.poll-modal') as HTMLElement;
+    dialog.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+    expect(component.modalOpen).toBe(true);
+  });
+
 });

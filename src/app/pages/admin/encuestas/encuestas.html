@@ -323,13 +323,14 @@
 <div
   class="modal-overlay"
   *ngIf="modalOpen"
-  (mousedown)="$event.target === $event.currentTarget && closeModal()"
+  (click)="onOverlayClick($event)"
 >
   <section
     class="modal poll-modal"
     role="dialog"
     aria-modal="true"
     aria-labelledby="poll-modal-title"
+    (click)="$event.stopPropagation()"
   >
     <header class="modal-header">
       <div>
@@ -349,6 +350,7 @@
           [(ngModel)]="form.electionId"
           (ngModelChange)="onElectionChange()"
           [disabled]="saving"
+          (focus)="onModalFieldFocus($event)"
         >
           <option [ngValue]="null">Selecciona una elección</option>
           <option
@@ -372,11 +374,17 @@
             maxlength="160"
             autocomplete="organization"
             [disabled]="saving"
+            (focus)="onModalFieldFocus($event)"
           />
         </div>
         <div class="form-group">
           <label for="poll-status">Estado <span class="req">*</span></label>
-          <select id="poll-status" [(ngModel)]="form.status" [disabled]="saving">
+          <select
+            id="poll-status"
+            [(ngModel)]="form.status"
+            [disabled]="saving"
+            (focus)="onModalFieldFocus($event)"
+          >
             <option *ngFor="let option of statusOptions" [ngValue]="option.value">{{ option.label }}</option>
           </select>
         </div>
@@ -385,7 +393,13 @@
       <div class="form-row three-columns">
         <div class="form-group">
           <label for="poll-date">Fecha de realización <span class="req">*</span></label>
-          <input id="poll-date" type="date" [(ngModel)]="form.date" [disabled]="saving" />
+          <input
+            id="poll-date"
+            type="date"
+            [(ngModel)]="form.date"
+            [disabled]="saving"
+            (focus)="onModalFieldFocus($event)"
+          />
         </div>
         <div class="form-group">
           <label for="poll-sample">Tamaño de muestra <span class="req">*</span></label>
@@ -397,7 +411,9 @@
             max="10000000"
             step="1"
             inputmode="numeric"
+            autocomplete="off"
             [disabled]="saving"
+            (focus)="onModalFieldFocus($event)"
           />
         </div>
         <div class="form-group">
@@ -410,7 +426,9 @@
             max="20"
             step="0.01"
             inputmode="decimal"
+            autocomplete="off"
             [disabled]="saving"
+            (focus)="onModalFieldFocus($event)"
           />
         </div>
       </div>
@@ -424,6 +442,7 @@
           maxlength="500"
           [disabled]="saving"
           placeholder="Describe tipo de levantamiento, cobertura y método de muestreo"
+          (focus)="onModalFieldFocus($event)"
         ></textarea>
         <small class="field-help">{{ form.methodology.length }}/500 caracteres</small>
       </div>
@@ -450,6 +469,7 @@
               [id]="'poll-candidate-' + index"
               [(ngModel)]="result.candidateId"
               [disabled]="saving || !form.electionId"
+              (focus)="onModalFieldFocus($event)"
             >
               <option [ngValue]="null">Selecciona un candidato</option>
               <option
@@ -474,7 +494,9 @@
                 max="100"
                 step="0.01"
                 inputmode="decimal"
+                autocomplete="off"
                 [disabled]="saving"
+                (focus)="onModalFieldFocus($event)"
               />
               <span aria-hidden="true">%</span>
             </div>

@@ -4234,3 +4234,64 @@ html.native-platform app-root {
     flex-basis: min(88px, 34%);
   }
 }
+
+/* Encuestas: interacción fiable del editor en pantallas táctiles y Android WebView. */
+app-encuestas {
+  .modal-overlay {
+    z-index: 2147483100;
+    pointer-events: auto;
+    touch-action: none;
+  }
+
+  .poll-modal {
+    position: relative;
+    pointer-events: auto;
+    touch-action: auto;
+    isolation: isolate;
+  }
+
+  .poll-modal :is(.modal-header, .modal-body, .modal-footer, .form-group, .result-editor) {
+    pointer-events: auto;
+  }
+
+  .poll-modal :is(input, select, textarea, button, label) {
+    position: relative;
+    z-index: 1;
+    pointer-events: auto !important;
+    touch-action: auto !important;
+  }
+
+  .poll-modal :is(input, textarea) {
+    -webkit-user-select: text;
+    user-select: text;
+    caret-color: var(--app-text);
+  }
+
+  .poll-modal select {
+    -webkit-user-select: auto;
+    user-select: auto;
+  }
+
+  .poll-modal :is(input, select, textarea):disabled {
+    pointer-events: none !important;
+  }
+}
+
+@media (hover: none), (pointer: coarse) {
+  app-encuestas .poll-modal {
+    /* Transformed scroll containers can prevent the Android WebView from
+       attaching the virtual keyboard to focused form fields. */
+    animation: none !important;
+    transform: none !important;
+  }
+
+  app-encuestas .poll-modal .modal-body {
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+  }
+}
+
+html.native-platform app-encuestas .poll-modal .modal-body {
+  max-height: calc(100dvh - 164px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+}

@@ -283,7 +283,25 @@ export class Encuestas implements OnInit {
           electionId: this.defaultElectionId(),
         };
     this.modalOpen = true;
-    queueMicrotask(() => this.firstField?.nativeElement.focus());
+    this.focusFirstFieldWhenAppropriate();
+  }
+
+  onOverlayClick(event: MouseEvent): void {
+    if (event.target === event.currentTarget) {
+      this.closeModal();
+    }
+  }
+
+  onModalFieldFocus(event: FocusEvent): void {
+    const field = event.target as HTMLElement | null;
+    if (!field || !this.isCoarsePointer()) return;
+
+    // Android WebView can leave focused fields hidden inside a nested scroll area
+    // when the soft keyboard opens. Waiting for the viewport resize keeps the
+    // active control visible without stealing focus from the user.
+    globalThis.setTimeout(() => {
+      field.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'smooth' });
+    }, 220);
   }
 
   closeModal(): void {
@@ -499,6 +517,24 @@ export class Encuestas implements OnInit {
 
   trackByCandidate(_: number, candidate: PollCandidate): number {
     return candidate.id;
+  }
+
+  private focusFirstFieldWhenAppropriate(): void {
+    // Programmatic focus is useful with mouse/keyboard, but on Android WebView it
+    // may consume the user activation that is needed to open the soft keyboard.
+    if (this.isCoarsePointer()) return;
+
+    globalThis.setTimeout(() => {
+      this.firstField?.nativeElement.focus({ preventScroll: true });
+    });
+  }
+
+  private isCoarsePointer(): boolean {
+    try {
+      return globalThis.matchMedia?.('(hover: none), (pointer: coarse)').matches ?? false;
+    } catch {
+      return false;
+    }
   }
 
   private validateForm(): string | null {
