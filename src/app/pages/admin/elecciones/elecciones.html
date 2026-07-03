@@ -44,9 +44,9 @@
   <div class="stat-card">
     <div class="stat-top">
       <div>
-        <div class="stat-label">Trazabilidad</div>
-        <div class="stat-value">100%</div>
-        <div class="stat-sub">Auditoría activa</div>
+        <div class="stat-label">Eventos de Auditoría</div>
+        <div class="stat-value">{{ eventosAuditoria }}</div>
+        <div class="stat-sub">Registros persistidos</div>
       </div>
       <div class="stat-icon icon-orange">⚙</div>
     </div>
@@ -127,10 +127,10 @@
 </div>
 
 <div class="card">
-  <h3>Configuración Rápida</h3>
+  <h3>Distribución por Estado</h3>
 
   <div class="config-grid">
-    <div class="config-card" *ngFor="let c of configuracion">
+    <div class="config-card" *ngFor="let c of resumenEstados">
       <div class="cfg-icon">{{ c.icon }}</div>
       <div class="cfg-title">{{ c.titulo }}</div>
       <div class="cfg-sub">{{ c.descripcion }}</div>
@@ -153,7 +153,7 @@
         <input
           type="text"
           [(ngModel)]="form.nombre"
-          placeholder="Ej: Elecciones Presidenciales 2026"
+          placeholder="Nombre de la elección"
         />
       </div>
 

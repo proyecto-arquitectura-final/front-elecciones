@@ -20,25 +20,11 @@ export class Login {
   error = false;
   mensajeError = '';
   cargando = false;
-  rolSeleccionado = '';
 
   constructor(
     private readonly router: Router,
     private readonly authService: AuthService,
   ) {}
-
-  seleccionarRol(rol: 'admin' | 'analista') {
-    this.rolSeleccionado = rol;
-    this.error = false;
-
-    if (rol === 'admin') {
-      this.correo = 'admin@elecciones.gov.co';
-      this.contrasena = 'admin1234';
-    } else {
-      this.correo = 'analista@elecciones.gov.co';
-      this.contrasena = 'analista1234';
-    }
-  }
 
   ingresar() {
     if (!this.correo || !this.contrasena) {

@@ -113,7 +113,7 @@
         <div class="int-bar-track">
           <div
             class="int-bar-fill"
-            [ngClass]="c.colorClass"
+            [style.background]="c.color"
             [style.width]="c.pct + '%'"
           ></div>
         </div>
@@ -175,7 +175,7 @@
         <input
           type="text"
           [(ngModel)]="form.fuente"
-          placeholder="Ej: Centro Nacional de Consultoría"
+          placeholder="Nombre de la fuente"
         />
       </div>
 

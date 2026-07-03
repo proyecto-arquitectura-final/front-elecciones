@@ -10,7 +10,7 @@ interface CandidateView {
   id: string;
   nombre: string;
   partido: string;
-  partidoClass: string;
+  partidoColor: string;
   tipo: string;
   tipoClass: string;
   territorio: string;
@@ -59,7 +59,7 @@ export class CandidatosAnalista implements OnInit {
             id: `#${String(candidate.id || 0).padStart(4, '0')}`,
             nombre: candidate.name,
             partido: candidate.party?.name || 'Sin partido',
-            partidoClass: ['liberal', 'centro', 'pacto', 'cambio', 'verde'][index % 5],
+            partidoColor: candidate.party?.color || this.fallbackColor(index),
             tipo: this.formatType(candidate.electionType),
             tipoClass:
               candidate.electionType === 'PRESIDENCIA'
@@ -106,13 +106,20 @@ export class CandidatosAnalista implements OnInit {
   }
 
   get distribucion() {
-    const map = new Map<string, number>();
-    this.candidatos.forEach((candidate) =>
-      map.set(candidate.partido, (map.get(candidate.partido) || 0) + 1),
-    );
+    const map = new Map<string, { count: number; color: string }>();
+    this.candidatos.forEach((candidate) => {
+      const current = map.get(candidate.partido) || { count: 0, color: candidate.partidoColor };
+      current.count += 1;
+      map.set(candidate.partido, current);
+    });
     return [...map.entries()]
-      .map(([partido, count]) => ({ partido, count }))
+      .map(([partido, data]) => ({ partido, count: data.count, color: data.color }))
       .sort((a, b) => b.count - a.count);
+  }
+
+  private fallbackColor(index: number): string {
+    const palette = ['#2563eb', '#dc2626', '#16a34a', '#ea580c', '#7c3aed', '#0891b2'];
+    return palette[index % palette.length];
   }
 
   private formatType(type: string): string {

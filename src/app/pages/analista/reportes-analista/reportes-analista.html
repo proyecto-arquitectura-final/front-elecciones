@@ -17,6 +17,6 @@
 
 <div class="card">
   <h3>Vista Previa - Votos por Región</h3><p class="card-sub">Datos consolidados desde /api/v1/resultados</p>
-  <div class="preview-chart"><div class="chart-y"><span>{{ votosTotales | number }}</span><span>75%</span><span>50%</span><span>25%</span><span>0</span></div><div class="chart-bars"><div class="chart-col" *ngFor="let r of regionData"><div class="chart-bar" [style.height]="(votosTotales ? r.votos / votosTotales * 200 : 0) + 'px'"></div><span class="chart-label">{{ r.region }}</span></div></div></div>
+  <div class="preview-chart"><div class="chart-y"><span *ngFor="let value of chartAxis">{{ value | number }}</span></div><div class="chart-bars"><div class="chart-col" *ngFor="let r of regionData"><div class="chart-bar" [style.height]="(maxRegionVotes ? r.votos / maxRegionVotes * 200 : 0) + 'px'"></div><span class="chart-label">{{ r.region }}</span></div></div></div>
   <table class="analista-table"><thead><tr><th>Región</th><th>Votos Totales</th><th>Participación Promedio</th></tr></thead><tbody><tr *ngFor="let r of regionData"><td class="td-bold">{{ r.region }}</td><td>{{ r.votos | number }}</td><td>{{ r.participacion }}%</td></tr></tbody></table>
 </div>

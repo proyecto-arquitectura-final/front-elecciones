@@ -5,7 +5,7 @@
 
 <div class="card">
   <div class="card-header"><div><h3>Margen de Error de Encuestas Recientes</h3><p class="card-sub">Últimas {{ seriesMargen.length }} encuestas disponibles</p></div><span class="info-badge">ℹ Menor valor = mayor precisión</span></div>
-  <div class="vol-chart"><div class="vol-y"><span>4 pp</span><span>3 pp</span><span>2 pp</span><span>1 pp</span><span>0 pp</span></div><div class="vol-bars"><div class="vol-group" *ngFor="let s of seriesMargen" [title]="s.fuente"><div class="vol-bar" [style.height]="(s.valor / 4 * 160) + 'px'"></div><span class="vol-label">{{ s.label }}</span></div></div></div>
+  <div class="vol-chart"><div class="vol-y"><span *ngFor="let value of margenAxis">{{ value }} pp</span></div><div class="vol-bars"><div class="vol-group" *ngFor="let s of seriesMargen" [title]="s.fuente"><div class="vol-bar" [style.height]="(maxMargen ? s.valor / maxMargen * 160 : 0) + 'px'"></div><span class="vol-label">{{ s.label }}</span></div></div></div>
 </div>
 
 <div class="two-col">

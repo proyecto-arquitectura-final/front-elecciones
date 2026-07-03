@@ -16,7 +16,7 @@
 
 .alert-success {
   color: #166534;
-  background: #f0fdf4;
+  background: var(--app-success-soft);
   border: 1px solid #bbf7d0;
   border-radius: 8px;
   padding: 10px 12px;
@@ -25,9 +25,9 @@
 .result-editor {
   margin-top: 10px;
   padding: 14px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--app-border);
   border-radius: 10px;
-  background: #f8fafc;
+  background: var(--app-surface-soft);
 }
 
 .result-editor-header {
@@ -40,8 +40,8 @@
 
 .form-help {
   margin-top: 4px;
-  color: #64748b;
-  font-size: 12px;
+  color: var(--app-text-muted);
+  font-size: 0.75rem;
 }
 
 .result-row {

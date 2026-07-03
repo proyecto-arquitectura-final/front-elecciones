@@ -69,9 +69,9 @@ export class Reportes implements OnInit {
         iconClass: 'icon-green',
       },
       {
-        label: 'Formatos',
-        value: '3',
-        sub: 'PDF, CSV y JSON',
+        label: 'Mesas Reportadas',
+        value: this.regionData.reduce((sum, item) => sum + item.mesas, 0).toLocaleString('es-CO'),
+        sub: 'Según territorios consolidados',
         icon: '📘',
         iconClass: 'icon-purple',
       },
@@ -170,6 +170,16 @@ export class Reportes implements OnInit {
       format: 'json' as const,
     },
   ];
+
+  get maxRegionVotes(): number {
+    return Math.max(0, ...this.regionData.map((item) => item.votos));
+  }
+
+  get chartAxis(): number[] {
+    if (!this.maxRegionVotes) return [0];
+    const top = Math.ceil(this.maxRegionVotes / 1000) * 1000 || this.maxRegionVotes;
+    return [top, top * 0.75, top * 0.5, top * 0.25, 0].map((value) => Math.round(value));
+  }
 
   descargar(format: 'pdf' | 'csv' | 'json'): void {
     this.reporteService.descargarResultados(format);

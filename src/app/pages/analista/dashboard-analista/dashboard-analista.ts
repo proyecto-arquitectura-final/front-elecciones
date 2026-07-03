@@ -127,9 +127,19 @@ export class DashboardAnalista implements OnInit {
   }
 
   get encuestasValidas(): number {
-    return this.encuestas.filter(
-      (poll) => (poll.sampleSize || 0) >= 1500 && (poll.marginError || 0) <= 3,
-    ).length;
+    return this.encuestas.filter((poll) => this.esEncuestaConsistente(poll)).length;
+  }
+
+  get muestraReferencia(): number {
+    return this.encuestas.length
+      ? this.encuestas.reduce((sum, poll) => sum + (poll.sampleSize || 0), 0) / this.encuestas.length
+      : 0;
+  }
+
+  get margenReferencia(): number {
+    return this.encuestas.length
+      ? this.encuestas.reduce((sum, poll) => sum + (poll.marginError || 0), 0) / this.encuestas.length
+      : 0;
   }
 
   get votosTotales(): number {
@@ -142,7 +152,7 @@ export class DashboardAnalista implements OnInit {
       .map((result, index) => ({
         nombre: result.candidate?.name || `Candidato ${index + 1}`,
         pct: Math.round((result.percentage || 0) * 10) / 10,
-        colorClass: ['dot-green', 'dot-blue', 'dot-purple', 'dot-gray'][index % 4],
+        color: result.candidate?.party?.color || this.fallbackColor(index),
       }))
       .sort((a, b) => b.pct - a.pct);
   }
@@ -182,18 +192,15 @@ export class DashboardAnalista implements OnInit {
         fecha: poll.date,
         muestra: poll.sampleSize,
         margen: `±${poll.marginError}%`,
-        confianza: poll.marginError <= 2 ? 95 : poll.marginError <= 3 ? 90 : 80,
-        estado:
-          (poll.sampleSize || 0) >= 1500 && (poll.marginError || 0) <= 3
-            ? 'Validada'
-            : 'En revisión',
+        confianza: this.confianzaRelativa(poll),
+        estado: this.esEncuestaConsistente(poll) ? 'Consistente' : 'En revisión',
       }));
   }
 
   get tareas() {
     const tasks = [...this.encuestas]
       .reverse()
-      .filter((poll) => (poll.sampleSize || 0) < 1500 || (poll.marginError || 0) > 3)
+      .filter((poll) => !this.esEncuestaConsistente(poll))
       .slice(0, 4)
       .map((poll) => ({
         icon: '⚠',
@@ -219,6 +226,18 @@ export class DashboardAnalista implements OnInit {
     this.reporteService.descargarResultados('pdf');
   }
 
+
+  private esEncuestaConsistente(poll: Poll): boolean {
+    if (!this.encuestas.length) return false;
+    return (poll.sampleSize || 0) >= this.muestraReferencia &&
+      (poll.marginError || 0) <= this.margenReferencia;
+  }
+
+  private confianzaRelativa(poll: Poll): number {
+    const maxMargin = Math.max(1, ...this.encuestas.map((item) => item.marginError || 0));
+    return Math.round(Math.max(0, 100 - ((poll.marginError || 0) / maxMargin) * 100));
+  }
+
   private buildTrend(): void {
     const polls = this.encuestas.slice(-7);
     if (!polls.length) {
@@ -242,8 +261,10 @@ export class DashboardAnalista implements OnInit {
       x: startX + step * index,
     }));
 
-    const colors = ['#059669', '#3b82f6', '#8b5cf6'];
     this.series = latestNames.map((name, seriesIndex) => {
+      const color =
+        polls.at(-1)?.results.find((result) => result.candidate?.name === name)?.candidate?.party?.color ||
+        this.fallbackColor(seriesIndex);
       const dots = polls.map((poll, index) => {
         const value =
           poll.results.find((result) => result.candidate?.name === name)?.percentage || 0;
@@ -251,11 +272,16 @@ export class DashboardAnalista implements OnInit {
       });
       return {
         name,
-        color: colors[seriesIndex],
+        color,
         points: dots.map((dot) => `${dot.x},${dot.y}`).join(' '),
         dots,
       };
     });
+  }
+
+  private fallbackColor(index: number): string {
+    const palette = ['#059669', '#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444', '#06b6d4'];
+    return palette[index % palette.length];
   }
 
   private time(value?: string): number {

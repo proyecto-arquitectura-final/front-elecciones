@@ -1,0 +1,237 @@
+<nav class="navbar">
+  <a class="nav-brand" routerLink="/">
+    <div class="nav-icon">✓</div>
+    <div class="nav-brand-text">
+      <span class="nav-title">{{ title }}</span>
+      <span class="nav-subtitle">Sistema de Monitoreo Electoral</span>
+    </div>
+  </a>
+
+  <div class="nav-actions">
+    <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">📊 Resultados</a>
+    <a routerLink="/predicciones" routerLinkActive="active">📈 Predicciones</a>
+    <a routerLink="/asistente" routerLinkActive="active">💬 Asistente</a>
+    <a routerLink="/login" class="btn-admin">👤 Acceso Admin</a>
+  </div>
+</nav>
+
+<div class="page-shell" *ngIf="cargando">
+  <section class="card loading-state">
+    <span class="spinner"></span>
+    <div><strong>Calculando proyecciones</strong><p>Combinando resultados parciales y encuestas almacenadas.</p></div>
+  </section>
+</div>
+
+<div class="page-shell" *ngIf="error && !cargando">
+  <section class="alert alert--danger"><span>⚠</span><div><strong>No fue posible calcular el modelo</strong><p>{{ error }}</p></div></section>
+  <button class="btn btn--primary" type="button" (click)="cargar(electionId)">Reintentar</button>
+</div>
+
+<main class="page-shell" *ngIf="!cargando && !error">
+  <header class="page-header">
+    <div>
+      <div class="eyebrow">Análisis estadístico de datos persistidos</div>
+      <h1>Predicciones y proyecciones</h1>
+      <p>{{ subtitle }}</p>
+    </div>
+    <div class="header-actions">
+      <span class="quality-badge" [ngClass]="qualityClass">{{ qualityLabel }}</span>
+      <button class="btn btn--secondary" type="button" (click)="refrescar()" [disabled]="actualizando">
+        <span [class.rotate]="actualizando">↻</span> {{ actualizando ? 'Actualizando...' : 'Actualizar' }}
+      </button>
+    </div>
+  </header>
+
+  <section class="alert alert--danger prediction-warning">
+    <span>ℹ</span>
+    <div>
+      <strong>Predicción ≠ resultado oficial</strong>
+      <p>Esta vista presenta una estimación estadística construida con encuestas y resultados parciales de la base de datos. Puede cambiar a medida que aumenta el escrutinio.</p>
+    </div>
+  </section>
+
+  <section class="alert alert--warning" *ngIf="advertencia">
+    <span>⚠</span><div><strong>Actualización incompleta</strong><p>{{ advertencia }}</p></div>
+  </section>
+
+  <section class="card filter-card">
+    <div class="filter-group">
+      <label for="prediction-election">Elección analizada</label>
+      <select id="prediction-election" [(ngModel)]="electionId" (change)="cambiarEleccion()">
+        <option *ngFor="let election of data.elections" [ngValue]="election.id">
+          {{ election.name }} · {{ formatType(election.type) }}
+        </option>
+      </select>
+    </div>
+    <div class="model-info">
+      <span>Modelo aplicado</span>
+      <strong>{{ modelLabel }}</strong>
+      <small>Calculado: {{ generatedAtText }}</small>
+    </div>
+  </section>
+
+  <section class="tabs" aria-label="Vista de predicciones">
+    <button type="button" [class.active]="tab === 'MODELO'" (click)="tab = 'MODELO'">Resultados y proyección</button>
+    <button type="button" [class.active]="tab === 'ENCUESTAS'" (click)="tab = 'ENCUESTAS'">Evidencia de encuestas</button>
+  </section>
+
+  <ng-container *ngIf="tab === 'MODELO'">
+    <section class="stats-grid">
+      <article class="stat-card">
+        <div class="stat-header"><span>Datos procesados</span><span class="stat-icon blue">⌁</span></div>
+        <div class="stat-value blue-text">{{ data.metrics.processedPercentage | number:'1.0-1' }}%</div>
+        <div class="progress"><span [style.width.%]="data.metrics.processedPercentage"></span></div>
+        <small>Peso oficial del modelo: {{ data.metrics.officialWeight | number:'1.0-1' }}%</small>
+      </article>
+
+      <article class="stat-card">
+        <div class="stat-header"><span>Nivel de confianza</span><span class="stat-icon green">◎</span></div>
+        <div class="stat-value green-text">{{ data.metrics.confidence | number:'1.0-1' }}%</div>
+        <div class="progress"><span class="green" [style.width.%]="data.metrics.confidence"></span></div>
+        <small>Evaluación de cobertura, encuestas e incertidumbre</small>
+      </article>
+
+      <article class="stat-card">
+        <div class="stat-header"><span>Incertidumbre</span><span class="stat-icon orange">↗</span></div>
+        <div class="stat-value orange-text">±{{ data.metrics.averageUncertainty | number:'1.0-1' }}%</div>
+        <div class="progress"><span class="orange" [style.width.%]="data.metrics.averageUncertainty * 10"></span></div>
+        <small>Margen promedio estimado por el modelo</small>
+      </article>
+
+      <article class="stat-card">
+        <div class="stat-header"><span>Encuestas consideradas</span><span class="stat-icon purple">▥</span></div>
+        <div class="stat-value">{{ data.metrics.pollCount }}</div>
+        <small>{{ data.metrics.totalSample | number }} respuestas acumuladas</small>
+      </article>
+    </section>
+
+    <section class="card projection-card" *ngIf="candidates.length; else noPredictionData">
+      <div class="section-heading">
+        <div>
+          <h2>Probabilidad de liderazgo al cierre</h2>
+          <p>La probabilidad distribuye el escenario entre todos los candidatos modelados.</p>
+        </div>
+        <span class="model-chip">{{ modelLabel }}</span>
+      </div>
+
+      <div class="projection-list">
+        <article class="candidate-projection" *ngFor="let candidate of candidates; trackBy: trackByCandidate">
+          <div class="candidate-heading">
+            <div class="candidate-identity">
+              <span class="rank">{{ candidate.rank }}</span>
+              <span class="candidate-dot" [style.background]="candidate.color"></span>
+              <div>
+                <strong>{{ candidate.candidate }}</strong>
+                <small>{{ candidate.party }}<span *ngIf="candidate.acronym"> · {{ candidate.acronym }}</span></small>
+              </div>
+            </div>
+            <div class="candidate-probability">
+              <strong>{{ candidate.probability | number:'1.0-1' }}%</strong>
+              <span>probabilidad</span>
+            </div>
+          </div>
+
+          <div class="candidate-detail-row">
+            <span>Actual <strong>{{ candidate.currentPercentage | number:'1.0-1' }}%</strong></span>
+            <span>Encuestas <strong>{{ candidate.pollAverage | number:'1.0-1' }}%</strong></span>
+            <span>Proyección <strong>{{ candidate.projectedPercentage | number:'1.0-1' }}%</strong></span>
+            <span [class.trend-up]="candidate.trend > 0" [class.trend-down]="candidate.trend < 0">
+              Tendencia <strong>{{ candidate.trend > 0 ? '+' : '' }}{{ candidate.trend | number:'1.0-1' }} pp</strong>
+            </span>
+            <span>Incertidumbre <strong>±{{ candidate.uncertaintyMargin | number:'1.0-1' }}</strong></span>
+          </div>
+
+          <div class="probability-track">
+            <span [style.background]="candidate.color" [style.width.%]="candidate.probability"></span>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <ng-template #noPredictionData>
+      <section class="card empty-state">No existen resultados parciales ni encuestas suficientes para construir una predicción.</section>
+    </ng-template>
+
+    <section class="card comparison-card" *ngIf="candidates.length">
+      <div class="section-heading">
+        <div><h2>Resultado actual vs proyección</h2><p>Comparación porcentual calculada para cada candidato.</p></div>
+      </div>
+      <div class="bar-chart">
+        <div class="axis-labels"><span *ngFor="let value of axis">{{ value }}</span></div>
+        <div class="bar-groups">
+          <div class="bar-group" *ngFor="let candidate of candidates; trackBy: trackByCandidate">
+            <div class="bars">
+              <div
+                class="bar bar--current"
+                [style.height]="barHeight(candidate.currentPercentage)"
+                [attr.title]="'Resultado actual: ' + (candidate.currentPercentage | number:'1.0-1') + '%'"
+                [attr.aria-label]="'Resultado actual de ' + candidate.candidate + ': ' + (candidate.currentPercentage | number:'1.0-1') + '%'">
+              </div>
+              <div
+                class="bar bar--projected"
+                [style.height]="barHeight(candidate.projectedPercentage)"
+                [attr.title]="'Proyección final: ' + (candidate.projectedPercentage | number:'1.0-1') + '%'"
+                [attr.aria-label]="'Proyección final de ' + candidate.candidate + ': ' + (candidate.projectedPercentage | number:'1.0-1') + '%'">
+              </div>
+            </div>
+            <span>{{ candidate.candidate }}</span>
+          </div>
+        </div>
+      </div>
+      <div class="chart-legend"><span><i class="legend-current"></i> Resultado actual</span><span><i class="legend-projected"></i> Proyección final</span></div>
+    </section>
+
+    <section class="card methodology-card">
+      <div class="section-heading">
+        <div><h2>Metodología y calidad de la evidencia</h2><p>Factores calculados con los registros disponibles en PostgreSQL.</p></div>
+      </div>
+      <div class="factor-grid">
+        <article class="factor" *ngFor="let factor of data.factors" [ngClass]="factorClass(factor)">
+          <div class="factor-icon">{{ factorIcon(factor) }}</div>
+          <div><strong>{{ factor.title }}</strong><span>{{ factor.value }}</span><p>{{ factor.description }}</p></div>
+        </article>
+      </div>
+    </section>
+  </ng-container>
+
+  <ng-container *ngIf="tab === 'ENCUESTAS'">
+    <section class="card polls-card">
+      <div class="section-heading">
+        <div><h2>Encuestas utilizadas por el modelo</h2><p>Ordenadas desde la más reciente; la ponderación considera fecha, muestra y margen de error.</p></div>
+        <span class="model-chip">Peso: {{ data.metrics.pollWeight | number:'1.0-1' }}%</span>
+      </div>
+
+      <div class="table-wrap" *ngIf="data.polls.length; else noPolls">
+        <table>
+          <thead><tr><th>Fuente</th><th>Fecha</th><th>Muestra</th><th>Margen</th><th>Metodología</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let poll of data.polls">
+              <td><strong>{{ poll.source || 'Sin fuente' }}</strong></td>
+              <td>{{ poll.date || 'Sin fecha' }}</td>
+              <td>{{ poll.sampleSize | number }}</td>
+              <td>±{{ poll.marginError | number:'1.0-1' }}%</td>
+              <td>{{ poll.methodology || 'No registrada' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <ng-template #noPolls><div class="empty-state">No hay encuestas aplicables a la elección seleccionada.</div></ng-template>
+    </section>
+
+    <section class="card poll-average-card" *ngIf="candidates.length">
+      <div class="section-heading"><div><h2>Promedio ponderado por candidato</h2><p>Promedio calculado únicamente con las encuestas registradas.</p></div></div>
+      <div class="poll-average-list">
+        <div class="poll-average-row" *ngFor="let candidate of candidates">
+          <div><strong>{{ candidate.candidate }}</strong><span>{{ candidate.pollObservations }} mediciones</span></div>
+          <div class="average-track"><span [style.background]="candidate.color" [style.width.%]="candidate.pollAverage"></span></div>
+          <strong>{{ candidate.pollAverage | number:'1.0-1' }}%</strong>
+        </div>
+      </div>
+    </section>
+  </ng-container>
+
+  <footer class="data-footer">
+    <span>Las predicciones son informativas y se recalculan cada 60 segundos.</span>
+    <span>Elección: {{ title }}</span>
+  </footer>
+</main>

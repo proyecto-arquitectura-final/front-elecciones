@@ -64,7 +64,7 @@ describe('DashboardAdmin', () => {
 
   const resultadoService = {
     listar: vi.fn(() => of([])),
-    estadoRegistraduria: vi.fn(() => of('MOCK_CONNECTED')),
+    estadoRegistraduria: vi.fn(() => of('DATABASE_WITH_DATA')),
   };
 
   const usuarioService = {

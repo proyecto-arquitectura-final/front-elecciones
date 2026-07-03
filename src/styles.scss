@@ -1,1 +1,302 @@
-/* You can add global styles to this file, and also import other style files */
+:root {
+  --app-font: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --app-font-scale: 1;
+
+  --app-bg: #f5f7fb;
+  --app-surface: #ffffff;
+  --app-surface-soft: #f8fafc;
+  --app-surface-muted: #f1f5f9;
+  --app-text: #0f172a;
+  --app-text-secondary: #475569;
+  --app-text-muted: #64748b;
+  --app-text-subtle: #94a3b8;
+  --app-border: #e2e8f0;
+  --app-border-strong: #cbd5e1;
+  --app-border-soft: #e8edf5;
+  --app-nav-bg: rgba(255, 255, 255, .96);
+  --app-shadow: rgba(15, 23, 42, .14);
+
+  --app-primary: #2563eb;
+  --app-primary-text: #1d4ed8;
+  --app-primary-soft: #eff6ff;
+  --app-primary-muted: #dbeafe;
+  --app-success-soft: #dcfce7;
+  --app-warning-soft: #fffbeb;
+  --app-danger-soft: #fef2f2;
+  --app-purple-soft: #f5f3ff;
+  --app-orange-soft: #fff7ed;
+  --app-pink-soft: #fae8ff;
+}
+
+html[data-theme='dark'] {
+  --app-bg: #08111f;
+  --app-surface: #111c2e;
+  --app-surface-soft: #162337;
+  --app-surface-muted: #1c2b40;
+  --app-text: #f8fafc;
+  --app-text-secondary: #d2dcec;
+  --app-text-muted: #aab8ca;
+  --app-text-subtle: #8393a9;
+  --app-border: #2a3a50;
+  --app-border-strong: #3c4e66;
+  --app-border-soft: #223248;
+  --app-nav-bg: rgba(8, 17, 31, .94);
+  --app-shadow: rgba(0, 0, 0, .42);
+
+  --app-primary-text: #93c5fd;
+  --app-primary-soft: #172b4d;
+  --app-primary-muted: #1e3a5f;
+  --app-success-soft: #123526;
+  --app-warning-soft: #3a2b11;
+  --app-danger-soft: #3d1c24;
+  --app-purple-soft: #2c2442;
+  --app-orange-soft: #3b2818;
+  --app-pink-soft: #3b2140;
+}
+
+html {
+  min-height: 100%;
+  font-size: calc(16px * var(--app-font-scale));
+  background: var(--app-bg);
+  color-scheme: light;
+}
+
+html[data-theme='dark'] {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background: var(--app-bg);
+  color: var(--app-text);
+  font-family: var(--app-font);
+  transition: background-color .22s ease, color .22s ease;
+}
+
+body,
+button,
+input,
+select,
+textarea {
+  font-family: var(--app-font);
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--app-primary) 28%, transparent);
+}
+
+/* Normalize component hosts so every screen uses the same typography. */
+app-dashboard-public,
+app-public-predictions,
+app-public-assistant,
+app-login,
+app-admin-layout,
+app-dashboard-admin,
+app-partidos,
+app-candidatos,
+app-elecciones,
+app-encuestas,
+app-resultados,
+app-reportes,
+app-usuarios,
+app-auditoria,
+app-analista-layout,
+app-dashboard-analista,
+app-candidatos-analista,
+app-partidos-analista,
+app-encuestas-analista,
+app-resultados-analista,
+app-predicciones-analista,
+app-reportes-analista,
+app-asistente-analista,
+app-estadisticas-analista {
+  font-family: var(--app-font) !important;
+  color: var(--app-text);
+}
+
+/* Night mode: remaining gradients and component-specific surfaces. */
+html[data-theme='dark'] app-root {
+  background: var(--app-bg);
+  color: var(--app-text);
+}
+
+html[data-theme='dark'] :is(
+  .admin-wrapper,
+  .analista-wrapper,
+  .login-container,
+  .page-shell,
+  .main-content,
+  .admin-main,
+  .analista-main
+) {
+  background-color: var(--app-bg) !important;
+  color: var(--app-text) !important;
+}
+
+html[data-theme='dark'] :is(
+  .navbar,
+  .sidebar,
+  .card,
+  .stat-card,
+  .filters-card,
+  .filter-card,
+  .login-card,
+  .modal,
+  .chat-card,
+  .chat-header,
+  .chat-input,
+  .chat-note,
+  .quick-action,
+  .new-chat,
+  .clear-chat,
+  .btn-outline,
+  .btn--secondary,
+  .tabs button.active,
+  .reporte-card,
+  .seg-card,
+  .crit-card,
+  .accion-card
+) {
+  background: var(--app-surface) !important;
+  color: var(--app-text) !important;
+  border-color: var(--app-border) !important;
+}
+
+html[data-theme='dark'] :is(
+  input,
+  select,
+  textarea,
+  .search-box,
+  .input-wrap,
+  .input-icon,
+  .history-loading,
+  .message-body,
+  .typing-content,
+  .tabs,
+  .progress,
+  .mini-progress,
+  .prog-bar,
+  .prog-bar-mini,
+  .int-bar-track,
+  .dist-bar-track
+) {
+  background-color: var(--app-surface-soft) !important;
+  color: var(--app-text) !important;
+  border-color: var(--app-border) !important;
+}
+
+html[data-theme='dark'] :is(
+  .leader-card,
+  .chat-header
+) {
+  background-image: linear-gradient(135deg, var(--app-surface) 0%, var(--app-primary-soft) 100%) !important;
+}
+
+html[data-theme='dark'] :is(
+  table,
+  .admin-table,
+  .analista-table,
+  .data-table,
+  .territory-table,
+  .detail-table
+) {
+  color: var(--app-text) !important;
+}
+
+html[data-theme='dark'] :is(th, td, .card-header, .modal-header, .modal-footer, .sidebar-brand, .sidebar-footer, .chat-header, .chat-input, .source-list) {
+  border-color: var(--app-border) !important;
+}
+
+html[data-theme='dark'] :is(
+  .nav-title,
+  .brand-title,
+  .user-name,
+  .table-title,
+  .td-bold,
+  h1, h2, h3, h4, h5, h6,
+  label,
+  strong
+) {
+  color: var(--app-text);
+}
+
+html[data-theme='dark'] :is(
+  .nav-subtitle,
+  .brand-sub,
+  .page-header p,
+  .stat-label,
+  .stat-sub,
+  .card-sub,
+  small,
+  .chat-note,
+  .footer-text,
+  .td-gray,
+  .td-correo,
+  .td-detalle
+) {
+  color: var(--app-text-muted) !important;
+}
+
+html[data-theme='dark'] :is(.nav-item:hover, .quick-action:hover, .btn-outline:hover, .new-chat:hover, .clear-chat:hover) {
+  background: var(--app-surface-muted) !important;
+}
+
+html[data-theme='dark'] :is(.nav-item.active, .nav-section.active, .nav-actions > a.active, .tab-btn.active) {
+  background: var(--app-primary-soft) !important;
+  color: var(--app-primary-text) !important;
+}
+
+html[data-theme='dark'] .modal-overlay {
+  background: rgba(0, 0, 0, .72) !important;
+}
+
+html[data-theme='dark'] .message--user .message-body,
+html[data-theme='dark'] :is(.btn-primary, .btn--primary, .btn-admin, .btn-ingresar) {
+  color: #fff !important;
+}
+
+html[data-theme='dark'] .message--user small {
+  color: rgba(255, 255, 255, .76) !important;
+}
+
+html[data-theme='dark'] :is(.alert--success, .alert-success, .badge-system, .user-card) {
+  background: var(--app-success-soft) !important;
+  border-color: #276749 !important;
+}
+
+html[data-theme='dark'] :is(.alert--warning, .notice, .message-disclaimer) {
+  background: var(--app-warning-soft) !important;
+  border-color: #7c5a16 !important;
+}
+
+html[data-theme='dark'] :is(.alert--danger, .alert-danger, .alert-error, .chat-error, .prediction-warning) {
+  background: var(--app-danger-soft) !important;
+  border-color: #7f3343 !important;
+}
+
+html[data-theme='dark'] img {
+  filter: brightness(.92) contrast(1.04);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}

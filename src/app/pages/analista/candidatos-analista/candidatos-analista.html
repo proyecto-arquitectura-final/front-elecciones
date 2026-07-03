@@ -61,7 +61,7 @@
       <tr *ngFor="let c of candidatosFiltrados">
         <td class="td-id">{{ c.id }}</td>
         <td class="td-bold">{{ c.nombre }}</td>
-        <td><span class="tag-partido" [ngClass]="c.partidoClass">{{ c.partido }}</span></td>
+        <td><span class="tag-partido" [style.border-color]="c.partidoColor" [style.color]="c.partidoColor">{{ c.partido }}</span></td>
         <td><span class="tag-tipo" [ngClass]="c.tipoClass">{{ c.tipo }}</span></td>
         <td>{{ c.territorio }}</td>
         <td class="td-bold">{{ c.votos | number }}</td>
@@ -80,7 +80,7 @@
         <span class="dist-count">{{ p.count }} candidatos</span>
       </div>
       <div class="dist-bar-track">
-        <div class="dist-bar-fill" [style.width]="(p.count / (candidatos.length || 1) * 100) + '%'"></div>
+        <div class="dist-bar-fill" [style.background]="p.color" [style.width]="(p.count / (candidatos.length || 1) * 100) + '%'"></div>
       </div>
     </div>
   </div>

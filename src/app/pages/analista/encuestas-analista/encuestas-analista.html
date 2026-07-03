@@ -40,7 +40,7 @@
     <div class="intencion-list" *ngIf="intencionVoto.length; else sinResultados">
       <div class="int-item" *ngFor="let c of intencionVoto">
         <div class="int-header"><span class="int-name">{{ c.nombre }}</span><span class="int-pct">{{ c.pct }}%</span></div>
-        <div class="int-bar-track"><div class="int-bar-fill" [ngClass]="c.colorClass" [style.width]="c.pct + '%' "></div></div>
+        <div class="int-bar-track"><div class="int-bar-fill" [style.background]="c.color" [style.width]="c.pct + '%' "></div></div>
       </div>
     </div>
     <ng-template #sinResultados><p>No hay resultados asociados a la última encuesta.</p></ng-template>

@@ -78,13 +78,13 @@
     <h3>Comparación: Resultado Actual vs Proyección Final</h3>
     <div class="bar-chart">
       <div class="bar-y-labels">
-        <span>40</span><span>30</span><span>20</span><span>10</span><span>0</span>
+        <span *ngFor="let value of chartAxis">{{ value }}</span>
       </div>
       <div class="bar-groups">
         <div class="bar-group" *ngFor="let c of proyecciones">
           <div class="bars">
-            <div class="bar actual-blue" [style.height]="(c.actual / 100 * 200) + 'px'" title="Resultado actual"></div>
-            <div class="bar proyectado-green" [style.height]="(c.proyectado / 100 * 200) + 'px'" title="Proyección final"></div>
+            <div class="bar actual-blue" [style.height]="(c.actual / chartScale * 200) + 'px'" title="Resultado actual"></div>
+            <div class="bar proyectado-green" [style.height]="(c.proyectado / chartScale * 200) + 'px'" title="Proyección final"></div>
           </div>
           <span class="bar-label">{{ c.nombre.split(' ')[0] }} {{ c.nombre.split(' ')[1] }}</span>
         </div>
@@ -119,10 +119,10 @@
       <div class="pond-item" *ngFor="let c of promedioEncuestas">
         <div class="pond-header">
           <span class="pond-name">{{ c.nombre }}</span>
-          <span class="pond-badge" [ngClass]="c.colorClass">{{ c.promedio }}%</span>
+          <span class="pond-badge" [style.background]="c.color">{{ c.promedio }}%</span>
         </div>
         <div class="pond-bar-track">
-          <div class="pond-bar-fill" [ngClass]="c.colorClass" [style.width]="c.promedio + '%'"></div>
+          <div class="pond-bar-fill" [style.background]="c.color" [style.width]="c.promedio + '%'"></div>
         </div>
       </div>
     </div>

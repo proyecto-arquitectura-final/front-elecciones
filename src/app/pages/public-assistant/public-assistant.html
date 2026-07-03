@@ -1,0 +1,161 @@
+<nav class="navbar">
+  <a class="nav-brand" routerLink="/">
+    <div class="nav-icon">✓</div>
+    <div class="nav-brand-text">
+      <span class="nav-title">{{ electionTitle }}</span>
+      <span class="nav-subtitle">Sistema de Monitoreo Electoral</span>
+    </div>
+  </a>
+
+  <div class="nav-actions">
+    <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">📊 Resultados</a>
+    <a routerLink="/predicciones" routerLinkActive="active">📈 Predicciones</a>
+    <a routerLink="/asistente" routerLinkActive="active">💬 Asistente</a>
+    <a routerLink="/login" class="btn-admin">👤 Acceso Admin</a>
+  </div>
+</nav>
+
+<main class="page-shell">
+  <header class="page-header">
+    <div class="page-heading">
+      <div class="eyebrow">Tu guía para entender la elección</div>
+      <h1>Asistente electoral</h1>
+      <p>Haz preguntas sencillas y recibe explicaciones claras sobre resultados, encuestas, participación y proyecciones.</p>
+    </div>
+
+    <div class="header-controls">
+      <div class="assistant-status" [class.assistant-status--limited]="status?.enabled === false">
+        <span class="status-dot"></span>
+        <div>
+          <strong>Asistente disponible</strong>
+          <small>{{ status?.enabled === false ? 'Puede tardar un poco más' : 'Listo para ayudarte' }}</small>
+        </div>
+      </div>
+
+      <div class="election-select" *ngIf="elections.length">
+        <label for="assistant-election">Elección que deseas consultar</label>
+        <select id="assistant-election" [(ngModel)]="electionId" (change)="changeElection()">
+          <option *ngFor="let election of elections" [ngValue]="election.id">{{ election.name }}</option>
+        </select>
+      </div>
+    </div>
+  </header>
+
+  <section class="assistant-layout">
+    <aside class="sidebar">
+      <article class="card sidebar-card quick-card">
+        <div class="card-title-row">
+          <div>
+            <span class="section-kicker">Ideas para comenzar</span>
+            <h2>Preguntas sugeridas</h2>
+          </div>
+          <button class="new-chat" type="button" (click)="startNewConversation()" [disabled]="sending">
+            + Nueva
+          </button>
+        </div>
+
+        <button class="quick-action" type="button" *ngFor="let action of quickActions" (click)="send(action.prompt)" [disabled]="sending">
+          <span class="quick-action__icon">{{ action.icon }}</span>
+          <span class="quick-action__copy">
+            <strong>{{ action.label }}</strong>
+            <small>{{ action.description }}</small>
+          </span>
+          <span class="quick-action__arrow">›</span>
+        </button>
+      </article>
+
+      <article class="card sidebar-card topics-card">
+        <span class="section-kicker">Temas disponibles</span>
+        <h2>Puedes preguntarme por</h2>
+        <ul>
+          <li><span>📊</span> Resultados y diferencias</li>
+          <li><span>📈</span> Encuestas y tendencias</li>
+          <li><span>🗳️</span> Participación y mesas</li>
+          <li><span>🗺️</span> Información por regiones</li>
+          <li><span>🔎</span> Cómo interpretar las proyecciones</li>
+        </ul>
+      </article>
+
+      <article class="notice">
+        <div class="notice-icon">i</div>
+        <div>
+          <strong>Ten en cuenta</strong>
+          <p>Este asistente te ayuda a comprender la información electoral. Para confirmar resultados definitivos, consulta siempre las fuentes oficiales.</p>
+        </div>
+      </article>
+    </aside>
+
+    <section class="card chat-card">
+      <header class="chat-header">
+        <div class="bot-avatar">✦</div>
+        <div class="chat-identity">
+          <strong>Asistente electoral</strong>
+          <span><i></i> En línea</span>
+        </div>
+        <button class="clear-chat" type="button" (click)="startNewConversation()" [disabled]="sending">
+          Empezar de nuevo
+        </button>
+      </header>
+
+      <div class="chat-messages" #messagePanel>
+        <div class="history-loading" *ngIf="loadingHistory">Recuperando tu conversación…</div>
+
+        <article class="message" *ngFor="let message of messages" [class.message--user]="message.type === 'user'">
+          <div class="message-avatar" *ngIf="message.type === 'bot'">✦</div>
+          <div class="message-body">
+            <div class="message-meta" *ngIf="message.type === 'bot'">
+              <span>Asistente electoral</span>
+            </div>
+            <p>{{ message.text }}</p>
+
+            <div class="source-list" *ngIf="message.sources?.length">
+              <strong>Información consultada</strong>
+              <div>
+                <span *ngFor="let source of message.sources">{{ source }}</span>
+              </div>
+            </div>
+
+            <div class="message-disclaimer" *ngIf="message.disclaimer">{{ message.disclaimer }}</div>
+
+            <div class="message-footer">
+              <small>{{ message.time }}</small>
+              <div class="message-actions" *ngIf="message.type === 'bot' && message.messageId">
+                <button type="button" (click)="copy(message)" [attr.aria-label]="message.copied ? 'Copiado' : 'Copiar respuesta'">
+                  {{ message.copied ? '✓ Copiado' : '⧉ Copiar' }}
+                </button>
+                <span class="feedback-label">¿Te ayudó?</span>
+                <button type="button" (click)="rate(message, true)" [class.selected]="message.helpful === true" aria-label="Respuesta útil">👍</button>
+                <button type="button" (click)="rate(message, false)" [class.selected]="message.helpful === false" aria-label="Respuesta no útil">👎</button>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <div class="typing" *ngIf="sending">
+          <div class="message-avatar">✦</div>
+          <div class="typing-content">
+            <strong>Estoy revisando la información</strong>
+            <span></span><span></span><span></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="chat-error" *ngIf="error">{{ error }}</div>
+
+      <footer class="chat-input">
+        <textarea
+          [(ngModel)]="input"
+          [disabled]="sending"
+          placeholder="Escribe tu pregunta. Por ejemplo: ¿quién va ganando y por cuánto?"
+          (keydown)="onInputKeydown($event)"
+          maxlength="600"
+          rows="2"
+        ></textarea>
+        <button type="button" (click)="send()" [disabled]="sending || !input.trim()" aria-label="Enviar pregunta">➤</button>
+      </footer>
+      <div class="chat-note">
+        Enter para enviar · Shift + Enter para una nueva línea · {{ input.length }}/600
+      </div>
+    </section>
+  </section>
+</main>

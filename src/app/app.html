@@ -1,1 +1,46 @@
-<router-outlet></router-outlet>
+<div class="app-viewport">
+  <router-outlet></router-outlet>
+</div>
+
+<aside class="accessibility-toolbar" aria-label="Preferencias de visualización">
+  <button
+    type="button"
+    class="accessibility-button theme-button"
+    (click)="appearance.toggleTheme()"
+    [attr.aria-label]="appearance.isDark() ? 'Activar modo claro' : 'Activar modo noche'"
+    [attr.title]="appearance.isDark() ? 'Modo claro' : 'Modo noche'">
+    <span aria-hidden="true">{{ appearance.isDark() ? '☀' : '☾' }}</span>
+    <span class="control-label">{{ appearance.isDark() ? 'Claro' : 'Noche' }}</span>
+  </button>
+
+  <span class="toolbar-divider" aria-hidden="true"></span>
+
+  <button
+    type="button"
+    class="accessibility-button compact"
+    (click)="appearance.decreaseFontSize()"
+    [disabled]="!appearance.canDecreaseFont()"
+    aria-label="Reducir tamaño de letra"
+    title="Reducir tamaño de letra">
+    A−
+  </button>
+
+  <button
+    type="button"
+    class="font-size-indicator"
+    (click)="appearance.resetFontSize()"
+    aria-label="Restablecer tamaño de letra"
+    title="Restablecer tamaño de letra">
+    {{ appearance.fontSizeLabel() }}
+  </button>
+
+  <button
+    type="button"
+    class="accessibility-button compact"
+    (click)="appearance.increaseFontSize()"
+    [disabled]="!appearance.canIncreaseFont()"
+    aria-label="Aumentar tamaño de letra"
+    title="Aumentar tamaño de letra">
+    A+
+  </button>
+</aside>

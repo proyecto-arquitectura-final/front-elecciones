@@ -16,7 +16,7 @@ import { PartidoService } from '../../../core/services/partido.service';
 export class Partidos implements OnInit {
   private readonly cdr = inject(ChangeDetectorRef);
   stats = [
-    { label: 'Total Partidos', value: '0', sub: 'Activos en 2026' },
+    { label: 'Total Partidos', value: '0', sub: 'Registros persistidos' },
     { label: 'Candidatos Total', value: '0', sub: 'Todos los niveles' },
     { label: 'Coaliciones', value: '0', sub: 'Alianzas electorales' },
     { label: 'En Verificación', value: '0', sub: 'Pendientes CNE' },

@@ -66,9 +66,9 @@ export class ReportesAnalista implements OnInit {
         iconClass: 'icon-green',
       },
       {
-        label: 'Formatos',
-        value: '3',
-        sub: 'PDF, CSV y JSON',
+        label: 'Fuentes',
+        value: String(new Set(this.resultados.map((item) => item.source || 'Sin fuente')).size),
+        sub: 'Orígenes de datos',
         icon: '📘',
         iconClass: 'icon-purple',
       },
@@ -107,6 +107,16 @@ export class ReportesAnalista implements OnInit {
           : 0,
       }))
       .sort((a, b) => b.votos - a.votos);
+  }
+
+  get maxRegionVotes(): number {
+    return Math.max(0, ...this.regionData.map((item) => item.votos));
+  }
+
+  get chartAxis(): number[] {
+    if (!this.maxRegionVotes) return [0];
+    const top = Math.ceil(this.maxRegionVotes / 1000) * 1000 || this.maxRegionVotes;
+    return [top, top * 0.75, top * 0.5, top * 0.25, 0].map((value) => Math.round(value));
   }
 
   descargar(format: 'pdf' | 'csv' | 'json'): void {

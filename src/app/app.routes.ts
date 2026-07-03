@@ -1,6 +1,8 @@
 import { Routes } from '@angular/router';
 import { Login } from './pages/login/login';
 import { DashboardPublic } from './pages/dashboard-public/dashboard-public';
+import { PublicPredictions } from './pages/public-predictions/public-predictions';
+import { PublicAssistant } from './pages/public-assistant/public-assistant';
 
 import { AdminLayout } from './pages/admin/admin-layout/admin-layout';
 import { DashboardAdmin } from './pages/admin/dashboard-admin/dashboard-admin';
@@ -28,6 +30,8 @@ import { roleGuard } from './core/guards/role.guard';
 
 export const routes: Routes = [
   { path: '', component: DashboardPublic },
+  { path: 'predicciones', component: PublicPredictions },
+  { path: 'asistente', component: PublicAssistant },
   { path: 'login', component: Login },
   {
     path: 'admin',

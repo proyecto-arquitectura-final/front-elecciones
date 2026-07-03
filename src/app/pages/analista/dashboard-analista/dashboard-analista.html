@@ -21,7 +21,7 @@
     <ng-template #sinTendencia><p>No hay encuestas suficientes para construir la tendencia.</p></ng-template>
   </div>
 
-  <div class="card"><h3>Intención Actual</h3><p class="card-sub">{{ ultimaEncuesta?.source || 'Sin encuesta' }} · {{ ultimaEncuesta?.date || '-' }}</p><div class="donut-legend"><div class="dleg-item" *ngFor="let c of intencionActual"><span class="dleg-dot" [ngClass]="c.colorClass"></span><span class="dleg-name">{{ c.nombre }}</span><span class="dleg-pct">{{ c.pct }}%</span></div></div><p *ngIf="!intencionActual.length">La última encuesta no tiene resultados asociados.</p></div>
+  <div class="card"><h3>Intención Actual</h3><p class="card-sub">{{ ultimaEncuesta?.source || 'Sin encuesta' }} · {{ ultimaEncuesta?.date || '-' }}</p><div class="donut-legend"><div class="dleg-item" *ngFor="let c of intencionActual"><span class="dleg-dot" [style.background]="c.color"></span><span class="dleg-name">{{ c.nombre }}</span><span class="dleg-pct">{{ c.pct }}%</span></div></div><p *ngIf="!intencionActual.length">La última encuesta no tiene resultados asociados.</p></div>
 </div>
 
 <div class="card">

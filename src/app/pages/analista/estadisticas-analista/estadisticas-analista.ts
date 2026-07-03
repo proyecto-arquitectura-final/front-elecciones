@@ -91,9 +91,9 @@ export class EstadisticasAnalista implements OnInit {
       {
         label: 'Margen de error promedio',
         value: `±${this.promedioMargen}%`,
-        trend: this.promedioMargen <= 3 ? 'Dentro del criterio' : 'Requiere revisión',
-        valueClass: this.promedioMargen <= 3 ? '' : 'orange',
-        trendClass: this.promedioMargen <= 3 ? 'trend-green' : 'trend-orange',
+        trend: this.encuestas.length ? 'Promedio de datos registrados' : 'Sin datos',
+        valueClass: '',
+        trendClass: 'trend-gray',
       },
       {
         label: 'Brecha líder-segundo',
@@ -115,6 +115,17 @@ export class EstadisticasAnalista implements OnInit {
       }));
   }
 
+
+  get maxMargen(): number {
+    return Math.max(0, ...this.seriesMargen.map((item) => item.valor));
+  }
+
+  get margenAxis(): number[] {
+    if (!this.maxMargen) return [0];
+    const top = Math.ceil(this.maxMargen);
+    return [top, top * 0.75, top * 0.5, top * 0.25, 0].map((value) => this.round(value));
+  }
+
   get intencion() {
     return [...this.predicciones]
       .sort((a, b) => b.projectedPercentage - a.projectedPercentage)
@@ -129,12 +140,13 @@ export class EstadisticasAnalista implements OnInit {
   get hallazgos() {
     const leader = this.intencion[0];
     const valid = this.encuestas.filter(
-      (poll) => (poll.sampleSize || 0) >= 1500 && (poll.marginError || 0) <= 3,
+      (poll) => (poll.sampleSize || 0) >= this.promedioMuestra &&
+        (poll.marginError || 0) <= this.promedioMargen,
     ).length;
     return [
       {
         title: 'Calidad de encuestas',
-        detail: `${valid} de ${this.encuestas.length} cumplen muestra mínima y margen máximo.`,
+        detail: `${valid} de ${this.encuestas.length} están por encima de la muestra promedio y por debajo del margen promedio.`,
       },
       {
         title: 'Liderazgo proyectado',

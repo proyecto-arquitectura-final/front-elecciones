@@ -380,7 +380,8 @@ export class DashboardAdmin implements OnInit, OnDestroy {
   }
 
   private registraduriaStatus(value: string): string {
-    if (value === 'MOCK_CONNECTED') return 'Conectada';
+    if (value === 'DATABASE_WITH_DATA') return 'Con datos';
+    if (value === 'DATABASE_EMPTY') return 'Sin datos';
     if (value === 'NO_DISPONIBLE') return 'No disponible';
     return value || 'Conectada';
   }

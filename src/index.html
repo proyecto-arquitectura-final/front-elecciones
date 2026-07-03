@@ -1,11 +1,34 @@
 <!doctype html>
-<html lang="en">
+<html lang="es" data-theme="light" data-font-scale="1">
   <head>
     <meta charset="utf-8" />
-    <title>SrsFront</title>
+    <title>Elecciones Colombia 2026</title>
     <base href="/" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f5f7fb" />
     <link rel="icon" type="image/x-icon" href="favicon.ico" />
+    <script>
+      (() => {
+        try {
+          const storedTheme = localStorage.getItem('elecciones.theme');
+          const theme = storedTheme === 'dark' || storedTheme === 'light'
+            ? storedTheme
+            : (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+          const storedScaleValue = localStorage.getItem('elecciones.fontScale');
+          const storedScale = storedScaleValue === null ? Number.NaN : Number(storedScaleValue);
+          const scales = [0.9, 1, 1.125, 1.25];
+          const scaleIndex = Number.isInteger(storedScale) && storedScale >= 0 && storedScale < scales.length
+            ? storedScale
+            : 1;
+          document.documentElement.dataset.theme = theme;
+          document.documentElement.dataset.fontScale = String(scaleIndex);
+          document.documentElement.style.setProperty('--app-font-scale', String(scales[scaleIndex]));
+          document.documentElement.style.colorScheme = theme;
+        } catch {
+          // Se utilizan los valores visuales por defecto.
+        }
+      })();
+    </script>
   </head>
   <body>
     <app-root></app-root>

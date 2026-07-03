@@ -1,9 +1,23 @@
-import { Component, ChangeDetectorRef, inject } from '@angular/core';
-import { refreshView } from '../../core/utils/zoneless-view.util';
+import { ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
-import { ChatService } from '../../core/services/chat.service';
+import { interval } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { PublicDashboardService } from '../../core/services/public-dashboard.service';
+import {
+  PublicCandidate,
+  PublicDashboardData,
+  PublicTerritory,
+} from '../../core/models/public-dashboard.model';
+import { refreshView } from '../../core/utils/zoneless-view.util';
+
+interface VoteSegment {
+  label: string;
+  value: number;
+  percentage: number;
+  color: string;
+}
 
 @Component({
   selector: 'app-dashboard-public',
@@ -12,219 +26,326 @@ import { ChatService } from '../../core/services/chat.service';
   templateUrl: './dashboard-public.html',
   styleUrl: './dashboard-public.scss',
 })
-export class DashboardPublic {
+export class DashboardPublic implements OnInit {
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly palette = ['#2563eb', '#ef4444', '#22c55e', '#f59e0b', '#8b5cf6', '#06b6d4'];
 
-  readonly datosDemostrativos = true;
+  nivelTerritorial: 'DEPARTAMENTO' | 'MUNICIPIO' = 'DEPARTAMENTO';
+  electionId?: number;
+  cargando = true;
+  actualizando = false;
+  error = '';
+  advertenciaActualizacion = '';
+  filtroTerritorio = '';
+  pagina = 1;
+  readonly tamanoPagina = 10;
+  data: PublicDashboardData = this.emptyData();
 
-  constructor(private readonly chatService: ChatService) {}
+  constructor(private readonly dashboardService: PublicDashboardService) {}
 
-  // ── Navegación ──────────────────────────────────────────
-  vistaActiva: 'resultados' | 'predicciones' | 'asistente' = 'resultados';
+  ngOnInit(): void {
+    this.cargar();
 
-  setVista(vista: 'resultados' | 'predicciones' | 'asistente') {
-    this.vistaActiva = vista;
+    // Refresco silencioso para mantener el escrutinio actualizado sin recargar la página.
+    interval(60_000)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.cargar(this.electionId, true));
   }
 
-  // ── Filtros ─────────────────────────────────────────────
-  tipoEleccion = 'presidencia';
-  nivelTerritorial = 'nacional';
+  cambiarEleccion(): void {
+    this.pagina = 1;
+    this.filtroTerritorio = '';
+    this.cargar(this.electionId);
+  }
 
-  // ── Candidatos ──────────────────────────────────────────
-  candidatos = [
-    {
-      nombre: 'María Fernández',
-      partido: 'Partido Liberal',
-      votos: 4250000,
-      pct: 38.5,
-      tendencia: 'up',
-      colorClass: 'blue',
-    },
-    {
-      nombre: 'Carlos Rodríguez',
-      partido: 'Centro Democrático',
-      votos: 3890000,
-      pct: 35.2,
-      tendencia: 'down',
-      colorClass: 'red',
-    },
-    {
-      nombre: 'Ana López',
-      partido: 'Pacto Histórico',
-      votos: 1980000,
-      pct: 17.9,
-      tendencia: 'up',
-      colorClass: 'green',
-    },
-    {
-      nombre: 'Pedro Gómez',
-      partido: 'Cambio Radical',
-      votos: 920000,
-      pct: 8.4,
-      tendencia: 'flat',
-      colorClass: 'orange',
-    },
-  ];
+  cambiarNivel(): void {
+    this.pagina = 1;
+    this.filtroTerritorio = '';
+  }
 
-  // ── Departamentos ───────────────────────────────────────
-  departamentos = [
-    { nombre: 'Bogotá D.C.', procesado: 95, participacion: 68, lider: 'María Fernández' },
-    { nombre: 'Antioquia', procesado: 92, participacion: 71, lider: 'Carlos Rodríguez' },
-    { nombre: 'Valle del Cauca', procesado: 88, participacion: 65, lider: 'María Fernández' },
-    { nombre: 'Atlántico', procesado: 90, participacion: 62, lider: 'Ana López' },
-    { nombre: 'Santander', procesado: 85, participacion: 69, lider: 'Carlos Rodríguez' },
-  ];
+  aplicarFiltro(): void {
+    this.pagina = 1;
+  }
 
-  // ── Proyecciones ────────────────────────────────────────
-  proyecciones = [
-    {
-      nombre: 'María Fernández',
-      actual: 38.5,
-      proyectado: 39.2,
-      probabilidad: 94.2,
-      colorClass: 'blue',
-    },
-    {
-      nombre: 'Carlos Rodríguez',
-      actual: 35.2,
-      proyectado: 34.8,
-      probabilidad: 5.5,
-      colorClass: 'red',
-    },
-    { nombre: 'Ana López', actual: 17.9, proyectado: 18.1, probabilidad: 0.2, colorClass: 'green' },
-    {
-      nombre: 'Pedro Gómez',
-      actual: 8.4,
-      proyectado: 7.9,
-      probabilidad: 0.1,
-      colorClass: 'orange',
-    },
-  ];
+  cargar(electionId?: number, silencioso = false): void {
+    if (this.actualizando) return;
 
-  // ── Metodología ─────────────────────────────────────────
-  metodologia = [
-    {
-      icon: '🗃️',
-      iconClass: 'blue',
-      titulo: 'Datos Históricos',
-      descripcion: 'Patrones de votación de elecciones anteriores (2018, 2022)',
-    },
-    {
-      icon: '📊',
-      iconClass: 'purple',
-      titulo: 'Velocidad de Conteo',
-      descripcion: 'Ajuste por diferencias en tiempo de reporte entre regiones',
-    },
-    {
-      icon: '📈',
-      iconClass: 'green',
-      titulo: 'Comportamiento Regional',
-      descripcion: 'Tendencias por departamento y concentración urbana/rural',
-    },
-    {
-      icon: '↗️',
-      iconClass: 'orange',
-      titulo: 'Margen de Error',
-      descripcion: '±1.8% considerando incertidumbre estadística',
-    },
-  ];
+    this.actualizando = true;
+    if (!silencioso && !this.data.election) {
+      this.cargando = true;
+    }
+    if (!silencioso) {
+      this.error = '';
+    }
+    this.advertenciaActualizacion = '';
 
-  // ── Encuestas Pre-Electorales ───────────────────────────
-  encuestasAgregadas = [
-    { nombre: 'María Fernández', cnc: 36.5, invamer: 39.0, yanhaas: 37.5 },
-    { nombre: 'Carlos Rodríguez', cnc: 34.0, invamer: 33.5, yanhaas: 35.0 },
-    { nombre: 'Ana López', cnc: 18.0, invamer: 19.0, yanhaas: 18.0 },
-    { nombre: 'Pedro Gómez', cnc: 11.5, invamer: 10.0, yanhaas: 10.0 },
-  ];
-
-  promedioEncuestas = [
-    { nombre: 'María Fernández', promedio: 37, colorClass: 'blue' },
-    { nombre: 'Carlos Rodríguez', promedio: 34, colorClass: 'red' },
-    { nombre: 'Ana López', promedio: 18.3, colorClass: 'green' },
-    { nombre: 'Pedro Gómez', promedio: 10.7, colorClass: 'orange' },
-  ];
-
-  fuentesEncuestas = [
-    {
-      fuente: 'Centro Nacional de Consultoría',
-      fecha: '15 Mar 2026',
-      muestra: 2500,
-      margen: '±2%',
-      peso: '1x',
-    },
-    { fuente: 'Invamer', fecha: '18 Mar 2026', muestra: 3200, margen: '±1.8%', peso: '1.2x' },
-    { fuente: 'YanHaas', fecha: '20 Mar 2026', muestra: 2800, margen: '±1.9%', peso: '1.1x' },
-  ];
-
-  // ── Tab predicciones ────────────────────────────────────
-  tabPrediccion: 'vivo' | 'encuestas' = 'vivo';
-
-  // ── Chat ────────────────────────────────────────────────
-  inputMensaje = '';
-  escribiendo = false;
-
-  mensajes: { tipo: 'bot' | 'user'; texto: string; hora: string }[] = [
-    {
-      tipo: 'bot',
-      texto:
-        '¡Hola! Soy tu asistente electoral virtual. Puedo ayudarte a consultar resultados en tiempo real, ver predicciones, comparar candidatos y responder tus preguntas sobre las elecciones. ¿En qué puedo ayudarte?',
-      hora: this.horaActual(),
-    },
-  ];
-
-  accionesRapidas = [
-    { icon: '📊', texto: 'Consultar resultados actuales' },
-    { icon: '📈', texto: 'Ver predicciones' },
-    { icon: '👥', texto: 'Comparar candidatos' },
-    { icon: '⭐', texto: 'Resumen ejecutivo' },
-  ];
-
-  capacidades = [
-    'Consulta de resultados en vivo',
-    'Análisis de predicciones',
-    'Comparación de candidatos',
-    'Datos por región',
-    'Estadísticas de participación',
-    'Información histórica',
-  ];
-
-  enviarMensaje(texto: string) {
-    if (!texto.trim() || this.escribiendo) return;
-
-    const pregunta = texto.trim();
-    this.mensajes.push({ tipo: 'user', texto: pregunta, hora: this.horaActual() });
-    this.inputMensaje = '';
-    this.escribiendo = true;
-
-    this.chatService
-      .preguntar(pregunta)
+    this.dashboardService
+      .obtener(electionId)
       .pipe(refreshView(this.cdr))
       .subscribe({
-        next: (response) => {
-          this.escribiendo = false;
-          const tools = response.toolsUsed?.length
-            ? `\n\nHerramientas usadas: ${response.toolsUsed.join(', ')}`
-            : '';
-          this.mensajes.push({
-            tipo: 'bot',
-            texto: response.answer + tools,
-            hora: this.horaActual(),
-          });
+        next: (data) => {
+          this.data = data;
+          this.electionId = data.election?.id;
+          this.cargando = false;
+          this.actualizando = false;
+          this.advertenciaActualizacion = '';
+          this.ajustarPagina();
         },
         error: (error) => {
-          this.escribiendo = false;
+          const message =
+            error?.error?.message || 'No fue posible cargar los resultados desde la base de datos.';
+          if (silencioso && this.data.election) {
+            this.advertenciaActualizacion = `${message} Se conservan los últimos datos visibles.`;
+          } else {
+            this.error = message;
+          }
+          this.cargando = false;
+          this.actualizando = false;
           console.error(error);
-          this.mensajes.push({
-            tipo: 'bot',
-            texto:
-              'No pude consultar el asistente en este momento. Verifica que el backend esté disponible.',
-            hora: this.horaActual(),
-          });
         },
       });
   }
 
-  private horaActual(): string {
-    return new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+  refrescar(): void {
+    this.cargar(this.electionId, true);
+  }
+
+  exportarCsv(): void {
+    window.location.assign(this.dashboardService.exportUrl(this.electionId));
+  }
+
+  get electionTitle(): string {
+    return this.data.election?.name || 'Resultados electorales';
+  }
+
+  get electionSubtitle(): string {
+    const election = this.data.election;
+    if (!election) return 'No hay una elección configurada en la base de datos';
+    const date = election.date
+      ? new Date(`${election.date}T00:00:00`).toLocaleDateString('es-CO', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        })
+      : 'Fecha no registrada';
+    return `${this.formatType(election.type)} · ${this.formatRound(election.round)} · ${date}`;
+  }
+
+  get stateLabel(): string {
+    switch (this.data.election?.state) {
+      case 'CONFIGURADA': return 'Configurada';
+      case 'ABIERTA': return 'Votación abierta';
+      case 'EN_CONTEO': return 'En escrutinio';
+      case 'CERRADA': return 'Resultado cerrado';
+      case 'ARCHIVADA': return 'Archivada';
+      default: return 'Sin estado';
+    }
+  }
+
+  get stateClass(): string {
+    switch (this.data.election?.state) {
+      case 'ABIERTA': return 'status--open';
+      case 'EN_CONTEO': return 'status--counting';
+      case 'CERRADA': return 'status--closed';
+      case 'ARCHIVADA': return 'status--archived';
+      default: return 'status--configured';
+    }
+  }
+
+  get leaderTitle(): string {
+    return ['CERRADA', 'ARCHIVADA'].includes(this.data.election?.state || '')
+      ? 'Resultado consolidado'
+      : 'Líder actual del escrutinio';
+  }
+
+  get candidatos(): PublicCandidate[] {
+    return this.data.candidates;
+  }
+
+  get lider(): PublicCandidate | undefined {
+    return this.candidatos[0];
+  }
+
+  get segundo(): PublicCandidate | undefined {
+    return this.candidatos[1];
+  }
+
+  get voteSegments(): VoteSegment[] {
+    const validVotes = this.data.summary.validVotes || 0;
+    const segments: VoteSegment[] = this.candidatos.map((candidate, index) => ({
+      label: candidate.candidate,
+      value: candidate.votes,
+      percentage: candidate.percentage,
+      color: this.candidateColor(candidate, index),
+    }));
+
+    if (this.data.summary.blankVotes > 0) {
+      segments.push({
+        label: 'Voto en blanco',
+        value: this.data.summary.blankVotes,
+        percentage: validVotes > 0
+          ? this.round(this.data.summary.blankVotes * 100 / validVotes)
+          : 0,
+        color: '#94a3b8',
+      });
+    }
+    return segments;
+  }
+
+  get pieBackground(): string {
+    if (!this.voteSegments.length) return 'conic-gradient(#e2e8f0 0 100%)';
+    let cursor = 0;
+    const pieces = this.voteSegments.map((item) => {
+      const start = cursor;
+      cursor += item.percentage;
+      return `${item.color} ${start}% ${Math.min(100, cursor)}%`;
+    });
+    if (cursor < 100) pieces.push(`#e2e8f0 ${cursor}% 100%`);
+    return `conic-gradient(${pieces.join(', ')})`;
+  }
+
+  get voteBreakdownSegments(): VoteSegment[] {
+    const voters = this.data.summary.voters || 0;
+    const classified = this.data.summary.validVotes
+      + this.data.summary.nullVotes
+      + this.data.summary.unmarkedVotes;
+    const values = [
+      { label: 'Votos válidos', value: this.data.summary.validVotes, color: '#2563eb' },
+      { label: 'Votos nulos', value: this.data.summary.nullVotes, color: '#ef4444' },
+      { label: 'Tarjetas no marcadas', value: this.data.summary.unmarkedVotes, color: '#f59e0b' },
+    ];
+    if (voters > classified) {
+      values.push({ label: 'Otros / sin clasificar', value: voters - classified, color: '#94a3b8' });
+    }
+    return values.map((item) => ({
+      ...item,
+      percentage: voters > 0 ? this.round(item.value * 100 / voters) : 0,
+    }));
+  }
+
+  get voteBreakdownBackground(): string {
+    if (!this.data.summary.voters) return 'conic-gradient(#e2e8f0 0 100%)';
+    let cursor = 0;
+    return `conic-gradient(${this.voteBreakdownSegments.map((item) => {
+      const start = cursor;
+      cursor += item.percentage;
+      return `${item.color} ${start}% ${Math.min(100, cursor)}%`;
+    }).join(', ')})`;
+  }
+
+  get territoriosFiltrados(): PublicTerritory[] {
+    const term = this.normalizeSearch(this.filtroTerritorio);
+    return this.data.territories
+      .filter((item) => item.level === this.nivelTerritorial)
+      .filter((item) => {
+        if (!term) return true;
+        return this.normalizeSearch(`${item.department} ${item.municipality || ''} ${item.leader}`)
+          .includes(term);
+      });
+  }
+
+  get territoriosPagina(): PublicTerritory[] {
+    const start = (this.pagina - 1) * this.tamanoPagina;
+    return this.territoriosFiltrados.slice(start, start + this.tamanoPagina);
+  }
+
+  get totalPaginas(): number {
+    return Math.max(1, Math.ceil(this.territoriosFiltrados.length / this.tamanoPagina));
+  }
+
+  get rangoTerritorios(): string {
+    if (!this.territoriosFiltrados.length) return '0 resultados';
+    const start = (this.pagina - 1) * this.tamanoPagina + 1;
+    const end = Math.min(this.pagina * this.tamanoPagina, this.territoriosFiltrados.length);
+    return `${start}-${end} de ${this.territoriosFiltrados.length}`;
+  }
+
+  paginaAnterior(): void {
+    if (this.pagina > 1) this.pagina--;
+  }
+
+  paginaSiguiente(): void {
+    if (this.pagina < this.totalPaginas) this.pagina++;
+  }
+
+  get lastUpdatedText(): string {
+    const value = this.data.summary.lastUpdated;
+    return value
+      ? new Date(value).toLocaleString('es-CO', { dateStyle: 'medium', timeStyle: 'short' })
+      : 'Sin resultados cargados';
+  }
+
+  get consistencyMessage(): string {
+    if (this.data.summary.consistent) {
+      return 'Los votos de candidatos más el voto en blanco coinciden con el total de votos válidos.';
+    }
+    const difference = Math.abs(this.data.summary.consistencyDifference);
+    return `Hay una diferencia de ${this.formatNumber(difference)} votos entre el consolidado válido y el detalle por candidatos.`;
+  }
+
+  candidateColor(candidate: PublicCandidate, index: number): string {
+    return candidate.color || this.palette[index % this.palette.length];
+  }
+
+  formatType(value?: string): string {
+    if (value === 'PRESIDENCIA') return 'Presidencia';
+    if (value === 'SENADO') return 'Senado';
+    if (value === 'CAMARA') return 'Cámara de Representantes';
+    return value || 'Tipo no registrado';
+  }
+
+  formatRound(value?: string): string {
+    if (value === 'PRIMERA') return 'Primera vuelta';
+    if (value === 'SEGUNDA') return 'Segunda vuelta';
+    if (value === 'NINGUNA') return 'Sin ronda';
+    return value || 'Ronda no registrada';
+  }
+
+  formatNumber(value: number): string {
+    return new Intl.NumberFormat('es-CO').format(value || 0);
+  }
+
+  private ajustarPagina(): void {
+    if (this.pagina > this.totalPaginas) this.pagina = this.totalPaginas;
+  }
+
+  private normalizeSearch(value: string): string {
+    return value
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+  }
+
+  private round(value: number): number {
+    return Math.round(value * 10) / 10;
+  }
+
+  private emptyData(): PublicDashboardData {
+    return {
+      elections: [],
+      summary: {
+        candidateVotes: 0,
+        voters: 0,
+        eligibleVoters: 0,
+        validVotes: 0,
+        blankVotes: 0,
+        nullVotes: 0,
+        unmarkedVotes: 0,
+        reportedTables: 0,
+        totalTables: 0,
+        percentageTables: 0,
+        participation: 0,
+        departments: 0,
+        municipalities: 0,
+        resultRecords: 0,
+        consistencyDifference: 0,
+        consistent: true,
+        source: 'SIN_DATOS',
+      },
+      candidates: [],
+      territories: [],
+    };
   }
 }

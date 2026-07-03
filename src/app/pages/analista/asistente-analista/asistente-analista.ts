@@ -14,12 +14,13 @@ import { ChatService } from '../../../core/services/chat.service';
 export class AsistenteAnalista {
   private readonly cdr = inject(ChangeDetectorRef);
   inputMensaje = '';
+  private sessionId?: string;
   escribiendo = false;
   mensajes: { tipo: 'bot' | 'user'; texto: string; hora: string }[] = [
     {
       tipo: 'bot',
       texto:
-        '¡Hola! Soy tu asistente electoral virtual. Respondo usando herramientas MCP autorizadas del backend. ¿En qué puedo ayudarte?',
+        '¡Hola! Soy el asistente electoral con Gemini. Respondo usando el contexto de resultados, encuestas y predicciones preparado por el backend. ¿En qué puedo ayudarte?',
       hora: this.hora(),
     },
   ];
@@ -35,7 +36,7 @@ export class AsistenteAnalista {
     'Consulta de encuestas',
     'Datos por región',
     'Estadísticas de participación',
-    'Herramientas MCP controladas',
+    'Gemini con contexto electoral controlado',
   ];
   constructor(private readonly chatService: ChatService) {}
   enviarMensaje(texto: string) {
@@ -45,11 +46,12 @@ export class AsistenteAnalista {
     this.inputMensaje = '';
     this.escribiendo = true;
     this.chatService
-      .preguntar(pregunta)
+      .preguntar(pregunta, undefined, this.sessionId)
       .pipe(refreshView(this.cdr))
       .subscribe({
         next: (r) => {
           this.escribiendo = false;
+          this.sessionId = r.sessionId || this.sessionId;
           const tools = r.toolsUsed?.length
             ? `\n\nHerramientas usadas: ${r.toolsUsed.join(', ')}`
             : '';
@@ -61,7 +63,7 @@ export class AsistenteAnalista {
           this.mensajes.push({
             tipo: 'bot',
             texto:
-              'No pude consultar el MCP en este momento. Verifica que el backend esté encendido y el token sea válido.',
+              'No pude consultar Gemini en este momento. El backend puede usar la respuesta de contingencia si el proveedor no está disponible.',
             hora: this.hora(),
           });
         },

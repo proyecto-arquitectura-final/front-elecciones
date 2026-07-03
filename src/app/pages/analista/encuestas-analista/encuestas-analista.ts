@@ -69,7 +69,7 @@ export class EncuestasAnalista implements OnInit {
     return (this.encuestas[0]?.results || []).map((result, index) => ({
       nombre: result.candidate?.name || `Candidato ${index + 1}`,
       pct: result.percentage || 0,
-      colorClass: ['blue', 'red', 'green', 'orange'][index % 4],
+      color: result.candidate?.party?.color || this.fallbackColor(index),
     }));
   }
 
@@ -113,8 +113,16 @@ export class EncuestasAnalista implements OnInit {
     URL.revokeObjectURL(url);
   }
 
+  private fallbackColor(index: number): string {
+    const palette = ['#2563eb', '#dc2626', '#16a34a', '#ea580c', '#7c3aed', '#0891b2'];
+    return palette[index % palette.length];
+  }
+
   private esValida(poll: Poll): boolean {
-    return (poll.sampleSize || 0) >= 1500 && (poll.marginError || 0) <= 3;
+    if (!this.encuestas.length) return false;
+    const averageSample = this.encuestas.reduce((sum, item) => sum + (item.sampleSize || 0), 0) / this.encuestas.length;
+    const averageMargin = this.encuestas.reduce((sum, item) => sum + (item.marginError || 0), 0) / this.encuestas.length;
+    return (poll.sampleSize || 0) >= averageSample && (poll.marginError || 0) <= averageMargin;
   }
   private time(value?: string): number {
     return value ? new Date(`${value}T00:00:00`).getTime() : 0;

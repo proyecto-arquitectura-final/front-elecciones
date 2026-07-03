@@ -2,7 +2,11 @@ import { Component, OnInit, ChangeDetectorRef, inject } from '@angular/core';
 import { refreshView } from '../../../core/utils/zoneless-view.util';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { forkJoin } from 'rxjs';
 import { EleccionService } from '../../../core/services/eleccion.service';
+import { ResultadoService } from '../../../core/services/resultado.service';
+import { AuditoriaService } from '../../../core/services/auditoria.service';
+import { OfficialResult } from '../../../core/models/result.model';
 import {
   Election,
   ElectionRound,
@@ -26,40 +30,36 @@ export class Elecciones implements OnInit {
   form: any = this.formVacio();
   elecciones: Election[] = [];
 
-  configuracion = [
-    {
-      icon: '🗳',
-      titulo: 'Iniciar Conteo',
-      descripcion: 'Activar recepción de resultados',
-    },
-    {
-      icon: '⚙',
-      titulo: 'Configurar Mesas',
-      descripcion: 'Asignar puestos de votación',
-    },
-    {
-      icon: '📅',
-      titulo: 'Programar Segunda Vuelta',
-      descripcion: 'Configurar balotaje',
-    },
-  ];
+  resultados: OfficialResult[] = [];
+  eventosAuditoria = 0;
 
-  constructor(private readonly eleccionService: EleccionService) {}
+
+  constructor(
+    private readonly eleccionService: EleccionService,
+    private readonly resultadoService: ResultadoService,
+    private readonly auditoriaService: AuditoriaService,
+  ) {}
 
   ngOnInit(): void {
     this.cargar();
   }
 
   cargar(): void {
-    this.eleccionService
-      .listar()
+    forkJoin({
+      elecciones: this.eleccionService.listar(),
+      resultados: this.resultadoService.listar(),
+      auditoria: this.auditoriaService.listar(),
+    })
       .pipe(refreshView(this.cdr))
       .subscribe({
         next: (data) => {
-          this.elecciones = data;
+          this.elecciones = data.elecciones;
+          this.resultados = data.resultados;
+          this.eventosAuditoria = data.auditoria.length;
+          this.error = '';
         },
         error: (e) => {
-          this.error = 'No se pudieron cargar las elecciones';
+          this.error = 'No se pudo cargar la información persistida de elecciones.';
           console.error(e);
         },
       });
@@ -264,20 +264,29 @@ export class Elecciones implements OnInit {
   }
 
   progreso(e: Election): number {
-    switch (e.state) {
-      case 'CONFIGURADA':
-        return 0;
-      case 'ABIERTA':
-        return 25;
-      case 'EN_CONTEO':
-        return 75;
-      case 'CERRADA':
-        return 100;
-      case 'ARCHIVADA':
-        return 100;
-      default:
-        return 0;
+    const results = this.resultados.filter(
+      (result) => (result.election?.id || result.electionId) === e.id,
+    );
+    const territories = new Map<string, { reported: number; total: number }>();
+    for (const result of results) {
+      const key = `${result.department || 'Nacional'}|${result.municipality || 'Total'}`;
+      const current = territories.get(key) || { reported: 0, total: 0 };
+      current.reported = Math.max(current.reported, result.reportedTables || 0);
+      current.total = Math.max(current.total, result.totalTables || 0);
+      territories.set(key, current);
     }
+    const reported = [...territories.values()].reduce((sum, item) => sum + item.reported, 0);
+    const total = [...territories.values()].reduce((sum, item) => sum + item.total, 0);
+    return total ? Math.round((reported * 1000) / total) / 10 : 0;
+  }
+
+  get resumenEstados() {
+    return [
+      { icon: '⚙', titulo: 'Configuradas', descripcion: String(this.elecciones.filter((e) => e.state === 'CONFIGURADA').length) },
+      { icon: '🟢', titulo: 'Abiertas', descripcion: String(this.elecciones.filter((e) => e.state === 'ABIERTA').length) },
+      { icon: '📊', titulo: 'En conteo', descripcion: String(this.elecciones.filter((e) => e.state === 'EN_CONTEO').length) },
+      { icon: '✅', titulo: 'Cerradas o archivadas', descripcion: String(this.elecciones.filter((e) => ['CERRADA', 'ARCHIVADA'].includes(e.state)).length) },
+    ];
   }
 
   private formVacio() {
