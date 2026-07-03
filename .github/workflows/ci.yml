@@ -14,8 +14,8 @@ concurrency:
   group: frontend-${{ github.ref }}
   cancel-in-progress: true
 env:
-  NODE_VERSION: '22.14.0'
-  NPM_VERSION: '11.6.2'
+  NODE_VERSION: '24.16.0'
+  NPM_VERSION: '11.17.0'
 
 jobs:
   verify:
@@ -32,21 +32,22 @@ jobs:
           package-manager-cache: false
 
       - name: Configurar versión de npm
+        shell: bash
         run: |
+          set -Eeuo pipefail
           npm install --global "npm@${NPM_VERSION}"
-          echo "Node: $(node --version)"
-          echo "npm:  $(npm --version)"
+          hash -r
+
+          echo "Node instalado: $(node --version)"
+          echo "npm instalado:  $(npm --version)"
+
+          test "$(npm --version)" = "${NPM_VERSION}"
 
       - name: Instalar dependencias
         shell: bash
         run: |
           set -Eeuo pipefail
-
-          if ! npm ci --no-audit --no-fund; then
-            echo "::warning::npm ci falló internamente; limpiando caché y reintentando una vez"
-            npm cache clean --force
-            npm ci --no-audit --no-fund
-          fi
+          npm ci --no-audit --no-fund
 
       - name: Ejecutar pruebas
         run: npm test -- --watch=false
