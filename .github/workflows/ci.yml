@@ -15,24 +15,38 @@ concurrency:
   cancel-in-progress: true
 env:
   NODE_VERSION: '22.14.0'
-  NPM_VERSION: '10.9.2'
+  NPM_VERSION: '11.6.2'
 
 jobs:
   verify:
     runs-on: ubuntu-latest
+
     steps:
       - name: Descargar frontend
         uses: actions/checkout@v6
 
-      - name: Configurar Node 22
+      - name: Configurar Node
         uses: actions/setup-node@v6
         with:
-          node-version: '22'
-          cache: npm
-          cache-dependency-path: package-lock.json
+          node-version: ${{ env.NODE_VERSION }}
+          package-manager-cache: false
+
+      - name: Configurar versión de npm
+        run: |
+          npm install --global "npm@${NPM_VERSION}"
+          echo "Node: $(node --version)"
+          echo "npm:  $(npm --version)"
 
       - name: Instalar dependencias
-        run: npm ci --no-audit --no-fund
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+
+          if ! npm ci --no-audit --no-fund; then
+            echo "::warning::npm ci falló internamente; limpiando caché y reintentando una vez"
+            npm cache clean --force
+            npm ci --no-audit --no-fund
+          fi
 
       - name: Ejecutar pruebas
         run: npm test -- --watch=false
