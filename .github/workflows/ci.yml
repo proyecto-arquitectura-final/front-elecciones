@@ -13,6 +13,9 @@ permissions:
 concurrency:
   group: frontend-${{ github.ref }}
   cancel-in-progress: true
+env:
+  NODE_VERSION: '22.14.0'
+  NPM_VERSION: '10.9.2'
 
 jobs:
   verify:
