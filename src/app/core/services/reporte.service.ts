@@ -1,34 +1,56 @@
+import { HttpClient, HttpParams, HttpResponse } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { map, Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { ApiResponse } from '../models/api-response.model';
+import { ReportFormat, ReportManagement } from '../models/report.model';
 
 @Injectable({ providedIn: 'root' })
 export class ReporteService {
   private readonly apiUrl = `${environment.apiUrl}/reportes`;
+
   constructor(private readonly http: HttpClient) {}
 
-  descargarResultados(format: 'pdf' | 'csv' | 'json'): void {
-    const url = `${this.apiUrl}/resultados?format=${format}`;
+  gestion(electionId?: number | null): Observable<ReportManagement> {
+    let params = new HttpParams();
+    if (electionId != null) params = params.set('electionId', electionId);
+    return this.http
+      .get<ApiResponse<ReportManagement>>(`${this.apiUrl}/gestion`, { params })
+      .pipe(map((response) => response.data));
+  }
 
-    if (format === 'json') {
-      this.http.get<unknown>(url).subscribe(data => {
-        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-        this.download(blob, 'resultados.json');
-      });
-      return;
-    }
-
-    this.http.get(url, { responseType: 'blob' }).subscribe(blob => {
-      this.download(blob, `resultados.${format}`);
+  descargarResultadosPorEleccion(
+    electionId: number,
+    format: ReportFormat,
+  ): Observable<HttpResponse<Blob>> {
+    const params = new HttpParams()
+      .set('electionId', electionId)
+      .set('format', format.toLowerCase());
+    return this.http.get(`${this.apiUrl}/resultados`, {
+      params,
+      observe: 'response',
+      responseType: 'blob',
     });
   }
 
-  private download(blob: Blob, filename: string): void {
-    const a = document.createElement('a');
-    const objectUrl = URL.createObjectURL(blob);
-    a.href = objectUrl;
-    a.download = filename;
-    a.click();
-    URL.revokeObjectURL(objectUrl);
+  /** Compatibilidad con las pantallas de analista: usa la elección más reciente con resultados. */
+  descargarResultados(format: 'pdf' | 'csv' | 'json'): void {
+    const params = new HttpParams().set('format', format);
+    this.http
+      .get(`${this.apiUrl}/resultados`, { params, observe: 'response', responseType: 'blob' })
+      .subscribe({
+        next: (response) => {
+          if (!response.body) return;
+          const header = response.headers.get('content-disposition') ?? '';
+          const match = /filename="?([^";]+)"?/i.exec(header);
+          const filename = match?.[1] ?? `resultados.${format}`;
+          const url = URL.createObjectURL(response.body);
+          const anchor = document.createElement('a');
+          anchor.href = url;
+          anchor.download = filename;
+          anchor.click();
+          URL.revokeObjectURL(url);
+        },
+      });
   }
 }

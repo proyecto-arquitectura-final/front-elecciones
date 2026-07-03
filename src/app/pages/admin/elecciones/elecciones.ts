@@ -1,18 +1,58 @@
-import { Component, OnInit, ChangeDetectorRef, inject } from '@angular/core';
-import { refreshView } from '../../../core/utils/zoneless-view.util';
+import {
+  ChangeDetectorRef,
+  Component,
+  HostListener,
+  OnDestroy,
+  OnInit,
+  inject,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { forkJoin } from 'rxjs';
+import { ActivatedRoute } from '@angular/router';
+import { HttpErrorResponse } from '@angular/common/http';
+import { Subject, interval, take, takeUntil } from 'rxjs';
+import { refreshView } from '../../../core/utils/zoneless-view.util';
 import { EleccionService } from '../../../core/services/eleccion.service';
-import { ResultadoService } from '../../../core/services/resultado.service';
-import { AuditoriaService } from '../../../core/services/auditoria.service';
-import { OfficialResult } from '../../../core/models/result.model';
 import {
   Election,
+  ElectionManagement,
+  ElectionManagementItem,
   ElectionRound,
   ElectionState,
   ElectionType,
 } from '../../../core/models/election.model';
+
+interface ElectionForm {
+  id: number | null;
+  name: string;
+  type: ElectionType;
+  round: ElectionRound;
+  electionDate: string;
+  state: ElectionState;
+}
+
+interface FieldErrors {
+  name?: string;
+  type?: string;
+  round?: string;
+  electionDate?: string;
+  state?: string;
+}
+
+const EMPTY_MANAGEMENT: ElectionManagement = {
+  counters: {
+    total: 0,
+    configured: 0,
+    open: 0,
+    counting: 0,
+    closed: 0,
+    archived: 0,
+    withSummary: 0,
+    withoutSummary: 0,
+  },
+  elections: [],
+  generatedAt: '',
+};
 
 @Component({
   selector: 'app-elecciones',
@@ -21,282 +61,406 @@ import {
   templateUrl: './elecciones.html',
   styleUrl: './elecciones.scss',
 })
-export class Elecciones implements OnInit {
+export class Elecciones implements OnInit, OnDestroy {
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly destroy$ = new Subject<void>();
 
-  modalAbierto = false;
-  modoEdicion = false;
+  management: ElectionManagement = EMPTY_MANAGEMENT;
+  search = '';
+  typeFilter: ElectionType | 'ALL' = 'ALL';
+  stateFilter: ElectionState | 'ALL' = 'ALL';
+  summaryFilter: 'ALL' | 'WITH' | 'WITHOUT' = 'ALL';
+  page = 1;
+  pageSize = 8;
+
+  loading = true;
+  refreshing = false;
+  saving = false;
+  deleting = false;
   error = '';
-  form: any = this.formVacio();
-  elecciones: Election[] = [];
+  success = '';
 
-  resultados: OfficialResult[] = [];
-  eventosAuditoria = 0;
-
+  editorOpen = false;
+  deleteOpen = false;
+  editMode = false;
+  electionToDelete: ElectionManagementItem | null = null;
+  selectedElection: ElectionManagementItem | null = null;
+  fieldErrors: FieldErrors = {};
+  form: ElectionForm = this.emptyForm();
 
   constructor(
     private readonly eleccionService: EleccionService,
-    private readonly resultadoService: ResultadoService,
-    private readonly auditoriaService: AuditoriaService,
+    private readonly route: ActivatedRoute,
   ) {}
 
   ngOnInit(): void {
-    this.cargar();
+    this.load(true);
+    this.route.queryParamMap.pipe(take(1)).subscribe((params) => {
+      if (params.get('action') === 'new') this.openEditor();
+    });
+
+    interval(60_000)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => this.load(false, true));
   }
 
-  cargar(): void {
-    forkJoin({
-      elecciones: this.eleccionService.listar(),
-      resultados: this.resultadoService.listar(),
-      auditoria: this.auditoriaService.listar(),
-    })
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    if (this.deleteOpen) {
+      this.closeDelete();
+    } else if (this.editorOpen) {
+      this.closeEditor();
+    }
+  }
+
+  load(initial = false, silent = false): void {
+    if (initial && this.management.elections.length === 0) {
+      this.loading = true;
+    } else if (!silent) {
+      this.refreshing = true;
+    }
+    if (!silent) this.error = '';
+
+    this.eleccionService
+      .gestion()
       .pipe(refreshView(this.cdr))
       .subscribe({
         next: (data) => {
-          this.elecciones = data.elecciones;
-          this.resultados = data.resultados;
-          this.eventosAuditoria = data.auditoria.length;
-          this.error = '';
+          this.management = data;
+          this.loading = false;
+          this.refreshing = false;
+          this.normalizePage();
         },
-        error: (e) => {
-          this.error = 'No se pudo cargar la información persistida de elecciones.';
-          console.error(e);
+        error: (error: HttpErrorResponse) => {
+          this.loading = false;
+          this.refreshing = false;
+          if (!silent) {
+            this.error = this.readError(
+              error,
+              'No se pudo cargar la gestión de elecciones. Intenta nuevamente.',
+            );
+          }
         },
       });
   }
 
-  get activas(): number {
-    return this.elecciones.filter((e) => e.state === 'ABIERTA' || e.state === 'EN_CONTEO').length;
+  get elections(): ElectionManagementItem[] {
+    return this.management.elections;
   }
 
-  get programadas(): number {
-    return this.elecciones.filter((e) => e.state === 'CONFIGURADA').length;
+  get activeCount(): number {
+    return this.management.counters.open + this.management.counters.counting;
   }
 
-  abrirModal(e?: Election): void {
+  get completedCount(): number {
+    return this.management.counters.closed + this.management.counters.archived;
+  }
+
+  get filteredElections(): ElectionManagementItem[] {
+    const term = this.search.trim().toLowerCase();
+    return this.elections.filter((election) => {
+      const matchesSearch =
+        !term ||
+        [
+          election.name,
+          this.typeLabel(election.type),
+          this.roundLabel(election.round),
+          this.stateLabel(election.state),
+          election.electionDate,
+        ].some((value) => value.toLowerCase().includes(term));
+      const matchesType = this.typeFilter === 'ALL' || election.type === this.typeFilter;
+      const matchesState = this.stateFilter === 'ALL' || election.state === this.stateFilter;
+      const matchesSummary =
+        this.summaryFilter === 'ALL' ||
+        (this.summaryFilter === 'WITH'
+          ? election.summaryAvailable
+          : !election.summaryAvailable);
+
+      return matchesSearch && matchesType && matchesState && matchesSummary;
+    });
+  }
+
+  get totalPages(): number {
+    return Math.max(1, Math.ceil(this.filteredElections.length / this.pageSize));
+  }
+
+  get pagedElections(): ElectionManagementItem[] {
+    const start = (this.page - 1) * this.pageSize;
+    return this.filteredElections.slice(start, start + this.pageSize);
+  }
+
+  get visibleFrom(): number {
+    return this.filteredElections.length ? (this.page - 1) * this.pageSize + 1 : 0;
+  }
+
+  get visibleTo(): number {
+    return Math.min(this.page * this.pageSize, this.filteredElections.length);
+  }
+
+  get stateOptions(): ElectionState[] {
+    if (!this.editMode || !this.selectedElection) return ['CONFIGURADA'];
+    return [
+      this.selectedElection.state,
+      ...this.selectedElection.allowedStates.filter(
+        (state) => state !== this.selectedElection?.state,
+      ),
+    ];
+  }
+
+  get structuralFieldsDisabled(): boolean {
+    return Boolean(this.editMode && this.selectedElection?.structureLocked);
+  }
+
+  filtersChanged(): void {
+    this.page = 1;
+  }
+
+  clearFilters(): void {
+    this.search = '';
+    this.typeFilter = 'ALL';
+    this.stateFilter = 'ALL';
+    this.summaryFilter = 'ALL';
+    this.page = 1;
+  }
+
+  filterByState(state: ElectionState | 'ALL'): void {
+    this.stateFilter = state;
+    this.page = 1;
+  }
+
+  previousPage(): void {
+    if (this.page > 1) this.page--;
+  }
+
+  nextPage(): void {
+    if (this.page < this.totalPages) this.page++;
+  }
+
+  openEditor(election?: ElectionManagementItem): void {
     this.error = '';
-    this.modoEdicion = !!e;
-
-    this.form = e
+    this.success = '';
+    this.fieldErrors = {};
+    this.editMode = Boolean(election);
+    this.selectedElection = election ?? null;
+    this.form = election
       ? {
-          id: e.id,
-          nombre: e.name,
-          tipo: this.toVistaTipo(e.type),
-          ronda: this.toVistaRonda(e.round),
-          fecha: e.electionDate,
-          estado: this.toVistaEstado(e.state),
+          id: election.id,
+          name: election.name,
+          type: election.type,
+          round: election.round,
+          electionDate: election.electionDate,
+          state: election.state,
         }
-      : this.formVacio();
-
-    this.modalAbierto = true;
+      : this.emptyForm();
+    this.editorOpen = true;
   }
 
-  cerrarModal(): void {
-    this.modalAbierto = false;
+  closeEditor(): void {
+    if (this.saving) return;
+    this.editorOpen = false;
+    this.editMode = false;
+    this.selectedElection = null;
+    this.fieldErrors = {};
+    this.form = this.emptyForm();
+  }
+
+  typeChanged(): void {
+    this.fieldErrors.type = undefined;
+    this.fieldErrors.round = undefined;
+    this.form.round = this.form.type === 'PRESIDENCIA' ? 'PRIMERA' : 'NINGUNA';
+  }
+
+  save(): void {
     this.error = '';
-    this.form = this.formVacio();
-  }
+    this.success = '';
+    this.fieldErrors = this.validateForm();
+    if (Object.keys(this.fieldErrors).length > 0) return;
 
-  guardar(): void {
-    if (!this.form.nombre || !this.form.tipo || !this.form.fecha) {
-      this.error = 'Completa nombre, tipo y fecha.';
-      return;
-    }
-
-    const req: Election = {
-      name: this.form.nombre,
-      type: this.toApiTipo(this.form.tipo),
-      round: this.toApiRonda(this.form.ronda),
-      electionDate: this.form.fecha,
-      state: this.toApiEstado(this.form.estado),
+    const request: Election = {
+      name: this.form.name.trim().replace(/\s+/g, ' '),
+      type: this.form.type,
+      round: this.form.round,
+      electionDate: this.form.electionDate,
+      state: this.form.state,
     };
 
-    const obs =
-      this.modoEdicion && this.form.id
-        ? this.eleccionService.actualizar(this.form.id, req)
-        : this.eleccionService.crear(req);
+    this.saving = true;
+    const operation =
+      this.editMode && this.form.id
+        ? this.eleccionService.actualizar(this.form.id, request)
+        : this.eleccionService.crear(request);
 
-    obs.pipe(refreshView(this.cdr)).subscribe({
-      next: () => {
-        this.cerrarModal();
-        this.cargar();
+    operation.pipe(refreshView(this.cdr)).subscribe({
+      next: (saved) => {
+        this.saving = false;
+        this.editorOpen = false;
+        this.selectedElection = null;
+        this.form = this.emptyForm();
+        this.success = this.editMode
+          ? `${saved.name} fue actualizada correctamente.`
+          : `${saved.name} fue creada correctamente.`;
+        this.load(false);
       },
-      error: (e) => {
-        this.error = e?.error?.message || 'No se pudo guardar la elección';
-        console.error(e);
+      error: (error: HttpErrorResponse) => {
+        this.saving = false;
+        this.error = this.readError(error, 'No se pudo guardar la elección.');
       },
     });
   }
 
-  eliminar(e: Election): void {
-    if (!e.id || !confirm(`¿Eliminar "${e.name}"?`)) {
+  requestDelete(election: ElectionManagementItem): void {
+    this.error = '';
+    this.success = '';
+    if (!election.deletable) {
+      this.error = this.deleteRestrictionMessage(election);
       return;
     }
+    this.electionToDelete = election;
+    this.deleteOpen = true;
+  }
 
+  closeDelete(): void {
+    if (this.deleting) return;
+    this.deleteOpen = false;
+    this.electionToDelete = null;
+  }
+
+  confirmDelete(): void {
+    const election = this.electionToDelete;
+    if (!election) return;
+
+    this.deleting = true;
     this.eleccionService
-      .eliminar(e.id)
+      .eliminar(election.id)
       .pipe(refreshView(this.cdr))
       .subscribe({
-        next: () => this.cargar(),
-        error: (x) => {
-          this.error = x?.error?.message || 'No se pudo eliminar';
-          console.error(x);
+        next: () => {
+          this.deleting = false;
+          this.deleteOpen = false;
+          this.electionToDelete = null;
+          this.success = `${election.name} fue eliminada correctamente.`;
+          this.load(false);
+        },
+        error: (error: HttpErrorResponse) => {
+          this.deleting = false;
+          this.deleteOpen = false;
+          this.electionToDelete = null;
+          this.error = this.readError(error, 'No se pudo eliminar la elección.');
         },
       });
   }
 
-  toVistaTipo(t?: string): string {
-    switch (t) {
-      case 'PRESIDENCIA':
-        return 'Presidencia';
-      case 'SENADO':
-        return 'Senado';
-      case 'CAMARA':
-        return 'Cámara';
-      default:
-        return '';
+  typeLabel(type: ElectionType): string {
+    return type === 'PRESIDENCIA' ? 'Presidencia' : type === 'SENADO' ? 'Senado' : 'Cámara';
+  }
+
+  roundLabel(round: ElectionRound): string {
+    if (round === 'PRIMERA') return 'Primera vuelta';
+    if (round === 'SEGUNDA') return 'Segunda vuelta';
+    return 'No aplica';
+  }
+
+  stateLabel(state: ElectionState): string {
+    return {
+      CONFIGURADA: 'Configurada',
+      ABIERTA: 'Abierta',
+      EN_CONTEO: 'En conteo',
+      CERRADA: 'Cerrada',
+      ARCHIVADA: 'Archivada',
+    }[state];
+  }
+
+  stateDescription(state: ElectionState): string {
+    return {
+      CONFIGURADA: 'Lista para preparación',
+      ABIERTA: 'Proceso electoral abierto',
+      EN_CONTEO: 'Resultados en actualización',
+      CERRADA: 'Proceso finalizado',
+      ARCHIVADA: 'Conservada para consulta',
+    }[state];
+  }
+
+  typeClass(type: ElectionType): string {
+    return `type-${type.toLowerCase()}`;
+  }
+
+  stateClass(state: ElectionState): string {
+    return `state-${state.toLowerCase().replace('_', '-')}`;
+  }
+
+  formatDate(value?: string | null): string {
+    if (!value) return 'Sin fecha';
+    const [year, month, day] = value.split('-').map(Number);
+    return new Intl.DateTimeFormat('es-CO', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    }).format(new Date(year, month - 1, day));
+  }
+
+  formatDateTime(value?: string | null): string {
+    if (!value) return 'Sin actualización registrada';
+    return new Intl.DateTimeFormat('es-CO', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    }).format(new Date(value));
+  }
+
+  progressLabel(election: ElectionManagementItem): string {
+    if (!election.summaryAvailable || election.progress === null) return 'Sin resumen';
+    return `${election.progress.toLocaleString('es-CO', { maximumFractionDigits: 1 })}%`;
+  }
+
+  private validateForm(): FieldErrors {
+    const errors: FieldErrors = {};
+    const name = this.form.name.trim();
+    if (!name) errors.name = 'El nombre es obligatorio.';
+    else if (name.length < 5) errors.name = 'Usa un nombre más descriptivo.';
+    else if (name.length > 180) errors.name = 'El nombre no puede superar 180 caracteres.';
+
+    if (!this.form.type) errors.type = 'Selecciona el tipo de elección.';
+    if (!this.form.electionDate) errors.electionDate = 'Selecciona la fecha de la elección.';
+    if (this.form.type === 'PRESIDENCIA' && this.form.round === 'NINGUNA') {
+      errors.round = 'Presidencia requiere primera o segunda vuelta.';
     }
-  }
-
-  toApiTipo(t: string): ElectionType {
-    switch (t) {
-      case 'Presidencia':
-      case 'PRESIDENCIA':
-        return 'PRESIDENCIA';
-      case 'Senado':
-      case 'SENADO':
-        return 'SENADO';
-      case 'Cámara':
-      case 'Camara':
-      case 'CAMARA':
-        return 'CAMARA';
-      default:
-        return 'CAMARA';
+    if (this.form.type !== 'PRESIDENCIA' && this.form.round !== 'NINGUNA') {
+      errors.round = 'Senado y Cámara no utilizan ronda presidencial.';
     }
-  }
-
-  toVistaRonda(r?: string): string {
-    switch (r) {
-      case 'PRIMERA':
-        return 'Primera Vuelta';
-      case 'SEGUNDA':
-        return 'Segunda Vuelta';
-      case 'NINGUNA':
-        return 'Ninguna';
-      default:
-        return 'Ninguna';
+    if (!this.stateOptions.includes(this.form.state)) {
+      errors.state = 'El cambio de estado seleccionado no está permitido.';
     }
+    return errors;
   }
 
-  toApiRonda(r: string): ElectionRound {
-    switch (r) {
-      case 'Primera Vuelta':
-      case 'PRIMERA':
-      case 'PRIMERA_VUELTA':
-        return 'PRIMERA';
-      case 'Segunda Vuelta':
-      case 'SEGUNDA':
-      case 'SEGUNDA_VUELTA':
-        return 'SEGUNDA';
-      case 'Ninguna':
-      case 'No Aplica':
-      case 'NINGUNA':
-      default:
-        return 'NINGUNA';
+  private deleteRestrictionMessage(election: ElectionManagementItem): string {
+    if (!['CONFIGURADA', 'ARCHIVADA'].includes(election.state)) {
+      return `${election.name} no puede eliminarse en estado ${this.stateLabel(election.state).toLowerCase()}.`;
     }
+    return `${election.name} tiene candidatos, resultados, resumen electoral o conversaciones asociadas. Archívala para conservar la trazabilidad.`;
   }
 
-  toVistaEstado(s?: string): string {
-    switch (s) {
-      case 'CONFIGURADA':
-        return 'Programada';
-      case 'ABIERTA':
-        return 'Abierta';
-      case 'EN_CONTEO':
-        return 'En Conteo';
-      case 'CERRADA':
-        return 'Cerrada';
-      case 'ARCHIVADA':
-        return 'Archivada';
-      default:
-        return 'Programada';
-    }
+  private normalizePage(): void {
+    if (this.page > this.totalPages) this.page = this.totalPages;
   }
 
-  toApiEstado(s: string): ElectionState {
-    switch (s) {
-      case 'Programada':
-      case 'Configurada':
-      case 'CONFIGURADA':
-        return 'CONFIGURADA';
-      case 'Activa':
-      case 'Abierta':
-      case 'ABIERTA':
-      case 'ACTIVA':
-        return 'ABIERTA';
-      case 'En Conteo':
-      case 'EN_CONTEO':
-        return 'EN_CONTEO';
-      case 'Finalizada':
-      case 'Cerrada':
-      case 'CERRADA':
-      case 'FINALIZADA':
-        return 'CERRADA';
-      case 'Archivada':
-      case 'ARCHIVADA':
-        return 'ARCHIVADA';
-      default:
-        return 'CONFIGURADA';
-    }
+  private readError(error: HttpErrorResponse, fallback: string): string {
+    const message = error?.error?.message;
+    return typeof message === 'string' && message.trim() ? message : fallback;
   }
 
-  tipoClass(t?: string): string {
-    switch (t) {
-      case 'PRESIDENCIA':
-        return 'tag-presidencia';
-      case 'SENADO':
-        return 'tag-senado';
-      case 'CAMARA':
-        return 'tag-camara';
-      default:
-        return 'tag-camara';
-    }
-  }
-
-  progreso(e: Election): number {
-    const results = this.resultados.filter(
-      (result) => (result.election?.id || result.electionId) === e.id,
-    );
-    const territories = new Map<string, { reported: number; total: number }>();
-    for (const result of results) {
-      const key = `${result.department || 'Nacional'}|${result.municipality || 'Total'}`;
-      const current = territories.get(key) || { reported: 0, total: 0 };
-      current.reported = Math.max(current.reported, result.reportedTables || 0);
-      current.total = Math.max(current.total, result.totalTables || 0);
-      territories.set(key, current);
-    }
-    const reported = [...territories.values()].reduce((sum, item) => sum + item.reported, 0);
-    const total = [...territories.values()].reduce((sum, item) => sum + item.total, 0);
-    return total ? Math.round((reported * 1000) / total) / 10 : 0;
-  }
-
-  get resumenEstados() {
-    return [
-      { icon: '⚙', titulo: 'Configuradas', descripcion: String(this.elecciones.filter((e) => e.state === 'CONFIGURADA').length) },
-      { icon: '🟢', titulo: 'Abiertas', descripcion: String(this.elecciones.filter((e) => e.state === 'ABIERTA').length) },
-      { icon: '📊', titulo: 'En conteo', descripcion: String(this.elecciones.filter((e) => e.state === 'EN_CONTEO').length) },
-      { icon: '✅', titulo: 'Cerradas o archivadas', descripcion: String(this.elecciones.filter((e) => ['CERRADA', 'ARCHIVADA'].includes(e.state)).length) },
-    ];
-  }
-
-  private formVacio() {
+  private emptyForm(): ElectionForm {
     return {
       id: null,
-      nombre: '',
-      tipo: '',
-      ronda: 'Primera Vuelta',
-      fecha: '',
-      estado: 'Programada',
+      name: '',
+      type: 'PRESIDENCIA',
+      round: 'PRIMERA',
+      electionDate: '',
+      state: 'CONFIGURADA',
     };
   }
 }

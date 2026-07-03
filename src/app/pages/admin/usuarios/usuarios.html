@@ -1,206 +1,88 @@
-<div class="page-header">
-  <div>
-    <h1>Gestión de Usuarios</h1>
-    <p>Administrar usuarios y permisos del sistema</p>
+<header class="page-header">
+  <div><h1>Gestión de Usuarios</h1><p>Administra accesos, roles y estado de las cuentas del sistema.</p></div>
+  <div class="header-actions">
+    <button class="btn-outline" type="button" (click)="load(true)" [disabled]="loading || refreshing">{{ refreshing ? 'Actualizando…' : '↻ Actualizar' }}</button>
+    <button class="btn-primary" type="button" (click)="openModal()">+ Nuevo usuario</button>
   </div>
+</header>
 
-  <button class="btn-primary" (click)="abrirModal()">+ Nuevo Usuario</button>
-</div>
+<section class="stats-grid" aria-label="Resumen de usuarios">
+  <article class="stat-card" *ngFor="let stat of stats">
+    <div><span>{{ stat.label }}</span><strong>{{ stat.value | number }}</strong><small>{{ stat.sub }}</small></div>
+    <i [ngClass]="stat.class" aria-hidden="true">{{ stat.icon }}</i>
+  </article>
+</section>
 
-<div class="stats-grid">
-  <div class="stat-card" *ngFor="let s of stats">
-    <div class="stat-top">
-      <div>
-        <div class="stat-label">{{ s.label }}</div>
-        <div class="stat-value">{{ s.value }}</div>
-        <div class="stat-sub">{{ s.sub }}</div>
-      </div>
-      <div class="stat-icon" [ngClass]="s.iconClass">{{ s.icon }}</div>
-    </div>
-  </div>
-</div>
+<div class="alert error" *ngIf="error" role="alert"><span>{{ error }}</span><button type="button" (click)="load(false)">Reintentar</button></div>
 
-<div class="card">
+<section class="card" aria-labelledby="users-title">
   <div class="card-header">
-    <h3>Usuarios del Sistema</h3>
-
+    <div><h2 id="users-title">Usuarios del sistema</h2><p *ngIf="management">{{ management.users.totalElements | number }} usuario(s) encontrados</p></div>
     <div class="search-box">
-      <span>🔍</span>
-      <input
-        type="text"
-        placeholder="Buscar usuario..."
-        [(ngModel)]="busqueda"
-      />
+      <label class="sr-only" for="user-search">Buscar usuario</label>
+      <input id="user-search" type="search" [(ngModel)]="search" placeholder="Nombre o correo…" (keyup.enter)="applySearch()" />
+      <button type="button" (click)="applySearch()">Buscar</button>
+      <button class="clear" type="button" *ngIf="search" (click)="clearSearch()" aria-label="Limpiar búsqueda">×</button>
     </div>
   </div>
 
-  <div class="alert-error" *ngIf="error && !modalAbierto">{{ error }}</div>
+  <div class="loading-state" *ngIf="loading && !management">Cargando usuarios…</div>
+  <div class="empty-state" *ngIf="!loading && management && users.length === 0"><strong>No se encontraron usuarios.</strong><span>Revisa el criterio de búsqueda.</span></div>
 
-  <div *ngIf="cargando">Cargando usuarios...</div>
-
-  <table class="admin-table" *ngIf="!cargando">
-    <thead>
-      <tr>
-        <th>Nombre</th>
-        <th>Correo Electrónico</th>
-        <th>Rol</th>
-        <th>Último Acceso</th>
-        <th>Estado</th>
-        <th>Acciones</th>
-      </tr>
-    </thead>
-
-    <tbody>
-      <tr *ngFor="let u of usuariosFiltrados">
-        <td class="td-bold">{{ u.nombre }}</td>
-        <td class="td-correo">{{ u.correo }}</td>
-
-        <td>
-          <span class="badge-rol" [ngClass]="u.rolClass">
-            {{ u.rol }}
-          </span>
-        </td>
-
-        <td>{{ u.ultimoAcceso }}</td>
-
-        <td>
-          <span [ngClass]="u.activo ? 'badge-activo' : 'badge-inactivo'">
-            {{ u.activo ? 'Activo' : 'Inactivo' }}
-          </span>
-        </td>
-
-        <td class="td-actions">
-          <button
-            class="icon-btn edit"
-            type="button"
-            [disabled]="guardando"
-            (click)="abrirModal(u)"
-          >
-            ✏
-          </button>
-
-          <button
-            class="icon-btn del"
-            type="button"
-            [disabled]="guardando"
-            (click)="eliminar(u)"
-          >
-            🗑
-          </button>
-        </td>
-      </tr>
-    </tbody>
-  </table>
-</div>
-
-<div class="card">
-  <h3>Roles y Permisos del Sistema</h3>
-
-  <div class="roles-list">
-    <div class="rol-item" *ngFor="let r of roles" [ngClass]="r.badgeClass + '-bg'">
-      <div class="rol-header">
-        <span class="rol-nombre">{{ r.nombre }}</span>
-        <span class="rol-badge" [ngClass]="r.badgeClass">{{ r.badge }}</span>
-      </div>
-
-      <div class="rol-desc">{{ r.desc }}</div>
-    </div>
+  <div class="table-wrap" *ngIf="users.length > 0">
+    <table class="admin-table">
+      <thead><tr><th>Nombre</th><th>Correo electrónico</th><th>Rol</th><th>Último acceso</th><th>Estado</th><th>Acciones</th></tr></thead>
+      <tbody>
+        <tr *ngFor="let user of users; trackBy: trackById">
+          <td class="bold">{{ user.name }}</td>
+          <td>{{ user.email }}</td>
+          <td><span class="role-badge" [class.admin]="user.role === 'ADMINISTRADOR'">{{ roleLabel(user.role) }}</span></td>
+          <td>{{ user.lastLoginAt ? (user.lastLoginAt | date: 'dd/MM/yyyy, h:mm a') : 'Sin acceso registrado' }}</td>
+          <td><span class="status-badge" [class.active]="user.active" [class.inactive]="!user.active">{{ user.active ? 'Activo' : 'Inactivo' }}</span></td>
+          <td class="actions">
+            <button type="button" class="icon-button" (click)="openModal(user)" [attr.aria-label]="'Editar a ' + user.name">✎</button>
+            <button type="button" class="icon-button danger" (click)="requestDelete(user)" [attr.aria-label]="'Eliminar a ' + user.name">🗑</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
   </div>
-</div>
 
-<div class="modal-overlay" *ngIf="modalAbierto" (click)="cerrarModal()">
-  <div class="modal" (click)="$event.stopPropagation()">
+  <nav class="pagination" *ngIf="totalPages > 1" aria-label="Paginación de usuarios">
+    <button type="button" (click)="changePage(page - 1)" [disabled]="page === 0 || loading">Anterior</button>
+    <span>Página {{ page + 1 }} de {{ totalPages }}</span>
+    <button type="button" (click)="changePage(page + 1)" [disabled]="page + 1 >= totalPages || loading">Siguiente</button>
+  </nav>
+</section>
 
-    <div class="modal-header">
-      <h3>{{ modoEdicion ? 'Editar Usuario' : 'Nuevo Usuario' }}</h3>
-      <button
-        class="modal-close"
-        type="button"
-        [disabled]="guardando"
-        (click)="cerrarModal()"
-      >
-        ✕
-      </button>
-    </div>
+<section class="card roles-card" aria-labelledby="roles-title">
+  <h2 id="roles-title">Roles y permisos</h2>
+  <div class="roles-grid">
+    <article *ngFor="let role of roles"><div><strong>{{ role.name }}</strong><span>{{ role.badge }}</span></div><p>{{ role.description }}</p></article>
+  </div>
+</section>
 
+<div class="modal-overlay" *ngIf="modalOpen" (click)="closeModal()" role="presentation">
+  <section class="modal" role="dialog" aria-modal="true" aria-labelledby="user-modal-title" (click)="$event.stopPropagation()">
+    <header><h2 id="user-modal-title">{{ form.id ? 'Editar usuario' : 'Nuevo usuario' }}</h2><button type="button" (click)="closeModal()" [disabled]="saving" aria-label="Cerrar">×</button></header>
     <div class="modal-body">
-      <div class="alert-error" *ngIf="error">{{ error }}</div>
-
-      <div class="form-row">
-        <div class="form-group">
-          <label>Nombre Completo <span class="req">*</span></label>
-          <input
-            type="text"
-            [(ngModel)]="form.nombre"
-            placeholder="Ej: Juan Pérez"
-            [disabled]="guardando"
-          />
-        </div>
-
-        <div class="form-group">
-          <label>Correo Electrónico <span class="req">*</span></label>
-          <input
-            type="email"
-            [(ngModel)]="form.correo"
-            placeholder="correo@elecciones.gov.co"
-            [disabled]="guardando"
-          />
-        </div>
+      <div class="alert error" *ngIf="formError" role="alert">{{ formError }}</div>
+      <div class="form-grid">
+        <div class="field"><label for="user-name">Nombre completo *</label><input id="user-name" [(ngModel)]="form.name" maxlength="160" [disabled]="saving" /></div>
+        <div class="field"><label for="user-email">Correo electrónico *</label><input id="user-email" type="email" [(ngModel)]="form.email" maxlength="255" [disabled]="saving" /></div>
+        <div class="field"><label for="user-role">Rol *</label><select id="user-role" [(ngModel)]="form.role" [disabled]="saving"><option value="">Seleccionar…</option><option value="ADMINISTRADOR">Administrador</option><option value="ANALISTA">Analista</option></select></div>
+        <div class="field"><label for="user-status">Estado *</label><select id="user-status" [(ngModel)]="form.active" [disabled]="saving"><option [ngValue]="true">Activo</option><option [ngValue]="false">Inactivo</option></select></div>
       </div>
-
-      <div class="form-row">
-        <div class="form-group">
-          <label>Rol <span class="req">*</span></label>
-          <select
-            [(ngModel)]="form.rol"
-            (ngModelChange)="actualizarRolClass()"
-            [disabled]="guardando"
-          >
-            <option value="">Seleccionar rol...</option>
-            <option value="Administrador">Administrador</option>
-            <option value="Analista">Analista</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label>Estado</label>
-          <select [(ngModel)]="form.activo" [disabled]="guardando">
-            <option [ngValue]="true">Activo</option>
-            <option [ngValue]="false">Inactivo</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="form-group" *ngIf="!modoEdicion">
-        <label>Contraseña temporal <span class="req">*</span></label>
-        <input
-          type="password"
-          [(ngModel)]="form.password"
-          placeholder="Mínimo 8 caracteres"
-          [disabled]="guardando"
-        />
-      </div>
+      <div class="field"><label for="user-password">{{ form.id ? 'Nueva contraseña' : 'Contraseña temporal *' }}</label><input id="user-password" type="password" [(ngModel)]="form.password" minlength="8" maxlength="128" [disabled]="saving" autocomplete="new-password" /><small>{{ form.id ? 'Déjala vacía para conservar la contraseña actual.' : 'Mínimo 8 caracteres.' }}</small></div>
     </div>
+    <footer><button class="btn-outline" type="button" (click)="closeModal()" [disabled]="saving">Cancelar</button><button class="btn-primary" type="button" (click)="save()" [disabled]="saving">{{ saving ? 'Guardando…' : (form.id ? 'Guardar cambios' : 'Crear usuario') }}</button></footer>
+  </section>
+</div>
 
-    <div class="modal-footer">
-      <button
-        class="btn-outline"
-        type="button"
-        [disabled]="guardando"
-        (click)="cerrarModal()"
-      >
-        Cancelar
-      </button>
-
-      <button
-        class="btn-primary"
-        type="button"
-        [disabled]="guardando"
-        (click)="guardar()"
-      >
-        {{ guardando ? 'Guardando...' : (modoEdicion ? 'Guardar Cambios' : 'Crear Usuario') }}
-      </button>
-    </div>
-
-  </div>
+<div class="modal-overlay" *ngIf="deleteTarget" (click)="cancelDelete()" role="presentation">
+  <section class="modal confirm" role="alertdialog" aria-modal="true" aria-labelledby="delete-title" (click)="$event.stopPropagation()">
+    <header><h2 id="delete-title">Eliminar usuario</h2></header>
+    <div class="modal-body"><p>Se eliminará la cuenta <strong>{{ deleteTarget.name }}</strong> ({{ deleteTarget.email }}). Esta acción no elimina sus eventos históricos de auditoría.</p></div>
+    <footer><button class="btn-outline" type="button" (click)="cancelDelete()" [disabled]="saving">Cancelar</button><button class="btn-danger" type="button" (click)="confirmDelete()" [disabled]="saving">{{ saving ? 'Eliminando…' : 'Eliminar' }}</button></footer>
+  </section>
 </div>

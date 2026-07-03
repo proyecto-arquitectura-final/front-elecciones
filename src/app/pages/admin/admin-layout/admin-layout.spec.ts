@@ -22,4 +22,12 @@ describe('AdminLayout', () => {
   it('should create', () => {
     expect(component).toBeTruthy();
   });
+
+  it('no debe mostrar una opción de configuración sin ruta', () => {
+    fixture.detectChanges();
+
+    const text = fixture.nativeElement.textContent as string;
+    expect(text).not.toContain('Configuración');
+    expect(text).toContain('Cerrar Sesión');
+  });
 });

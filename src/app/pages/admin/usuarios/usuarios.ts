@@ -1,10 +1,19 @@
-import { Component, OnInit, ChangeDetectorRef, inject } from '@angular/core';
-import { refreshView } from '../../../core/utils/zoneless-view.util';
 import { CommonModule } from '@angular/common';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-
-import { AppUser, UserRequest, UserRole } from '../../../core/models/user.model';
+import { Subscription, interval } from 'rxjs';
+import { AppUser, UserManagement, UserRequest, UserRole } from '../../../core/models/user.model';
 import { UsuarioService } from '../../../core/services/usuario.service';
+import { refreshView } from '../../../core/utils/zoneless-view.util';
+
+interface UserForm {
+  id: number | null;
+  name: string;
+  email: string;
+  role: UserRole | '';
+  active: boolean;
+  password: string;
+}
 
 @Component({
   selector: 'app-usuarios',
@@ -13,257 +22,220 @@ import { UsuarioService } from '../../../core/services/usuario.service';
   templateUrl: './usuarios.html',
   styleUrl: './usuarios.scss',
 })
-export class Usuarios implements OnInit {
+export class Usuarios implements OnInit, OnDestroy {
   private readonly cdr = inject(ChangeDetectorRef);
+  private autoRefresh?: Subscription;
 
-  busqueda = '';
-  modalAbierto = false;
-  modoEdicion = false;
-  cargando = false;
-  guardando = false;
+  management?: UserManagement;
+  search = '';
+  page = 0;
+  readonly size = 10;
+  loading = false;
+  refreshing = false;
+  saving = false;
   error = '';
+  formError = '';
+  modalOpen = false;
+  deleteTarget?: AppUser;
+  form: UserForm = this.emptyForm();
 
-  form: any = this.formVacio();
-
-  stats = [
+  readonly roles = [
     {
-      label: 'Total Usuarios',
-      value: '0',
-      sub: 'Registrados en el sistema',
-      icon: '👥',
-      iconClass: 'icon-blue',
+      name: 'Administrador',
+      badge: 'Acceso total',
+      description:
+        'Gestiona usuarios, elecciones, encuestas, resultados, reportes y registros de auditoría.',
     },
     {
-      label: 'Activos',
-      value: '0',
-      sub: 'Con acceso habilitado',
-      icon: '👤',
-      iconClass: 'icon-green',
-    },
-    {
-      label: 'Administradores',
-      value: '0',
-      sub: 'Permisos completos',
-      icon: '🛡',
-      iconClass: 'icon-purple',
-    },
-    {
-      label: 'Analistas',
-      value: '0',
-      sub: 'Lectura y escritura',
-      icon: '👤',
-      iconClass: 'icon-orange',
-    },
-  ];
-
-  usuarios: any[] = [];
-
-  roles = [
-    {
-      nombre: 'Administrador',
-      badge: 'Full Access',
-      badgeClass: 'badge-full',
-      desc: 'Acceso completo al sistema: gestión de usuarios, configuración de elecciones, carga de resultados, generación de reportes y auditoría.',
-    },
-    {
-      nombre: 'Analista',
-      badge: 'Read Only',
-      badgeClass: 'badge-rw',
-      desc: 'Puede consultar candidatos, partidos, encuestas, resultados, predicciones y descargar reportes.',
+      name: 'Analista',
+      badge: 'Consulta y exportación',
+      description:
+        'Consulta información electoral, predicciones y reportes sin administrar usuarios ni modificar configuración protegida.',
     },
   ];
 
   constructor(private readonly usuarioService: UsuarioService) {}
 
   ngOnInit(): void {
-    this.cargarUsuarios();
+    this.load(false);
+    this.autoRefresh = interval(60_000).subscribe(() => this.load(true));
   }
 
-  get usuariosFiltrados() {
-    const filtro = this.busqueda.toLowerCase().trim();
-
-    return this.usuarios.filter(
-      (u) =>
-        !filtro ||
-        u.nombre.toLowerCase().includes(filtro) ||
-        u.correo.toLowerCase().includes(filtro),
-    );
+  ngOnDestroy(): void {
+    this.autoRefresh?.unsubscribe();
   }
 
-  cargarUsuarios(): void {
-    this.cargando = true;
+  get users(): AppUser[] {
+    return this.management?.users.items ?? [];
+  }
+
+  get totalPages(): number {
+    return this.management?.users.totalPages ?? 0;
+  }
+
+  get stats() {
+    const counters = this.management?.counters;
+    return [
+      { label: 'Total de usuarios', value: counters?.total ?? 0, sub: 'Registrados en el sistema', icon: '👥', class: 'blue' },
+      { label: 'Activos', value: counters?.active ?? 0, sub: 'Con acceso habilitado', icon: '✓', class: 'green' },
+      { label: 'Administradores', value: counters?.administrators ?? 0, sub: 'Con permisos completos', icon: '🛡', class: 'purple' },
+      { label: 'Analistas', value: counters?.analysts ?? 0, sub: 'Consulta y exportación', icon: '👤', class: 'orange' },
+    ];
+  }
+
+  load(background = false): void {
+    if (this.loading || this.refreshing) return;
     this.error = '';
+    if (background && this.management) this.refreshing = true;
+    else this.loading = true;
 
     this.usuarioService
-      .listar()
+      .gestion(this.search, this.page, this.size)
       .pipe(refreshView(this.cdr))
       .subscribe({
         next: (data) => {
-          this.usuarios = data.map((u) => this.toView(u));
-          this.actualizarStats();
-          this.cargando = false;
+          this.management = data;
+          this.page = data.users.page;
+          this.loading = false;
+          this.refreshing = false;
         },
         error: (err) => {
-          this.error = err?.error?.message || 'No se pudieron cargar los usuarios.';
-          this.cargando = false;
-          console.error('Error cargando usuarios:', err);
+          this.error = err?.error?.message || 'No fue posible actualizar los usuarios.';
+          this.loading = false;
+          this.refreshing = false;
         },
       });
   }
 
-  abrirModal(u?: any): void {
-    this.error = '';
-    this.guardando = false;
-    this.modoEdicion = !!u;
+  applySearch(): void {
+    this.page = 0;
+    this.load(false);
+  }
 
-    this.form = u
+  clearSearch(): void {
+    this.search = '';
+    this.page = 0;
+    this.load(false);
+  }
+
+  changePage(nextPage: number): void {
+    if (nextPage < 0 || nextPage >= this.totalPages || nextPage === this.page) return;
+    this.page = nextPage;
+    this.load(false);
+  }
+
+  openModal(user?: AppUser): void {
+    this.formError = '';
+    this.form = user
       ? {
-          id: u.id,
-          nombre: u.nombre,
-          correo: u.correo,
-          rol: u.rol,
-          rolClass: u.rolClass,
-          activo: u.activo,
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          active: user.active,
           password: '',
         }
-      : this.formVacio();
-
-    this.modalAbierto = true;
+      : this.emptyForm();
+    this.modalOpen = true;
   }
 
-  cerrarModal(): void {
-    if (this.guardando) {
-      return;
-    }
-
-    this.modalAbierto = false;
-    this.modoEdicion = false;
-    this.error = '';
-    this.guardando = false;
-    this.form = this.formVacio();
+  closeModal(): void {
+    if (this.saving) return;
+    this.modalOpen = false;
+    this.formError = '';
+    this.form = this.emptyForm();
   }
 
-  actualizarRolClass(): void {
-    const map: any = {
-      Administrador: 'rol-admin',
-      Analista: 'rol-analista',
-    };
-
-    this.form.rolClass = map[this.form.rol] || '';
-  }
-
-  guardar(): void {
-    if (this.guardando) {
-      return;
-    }
-
-    this.error = '';
-
-    if (!this.form.nombre || !this.form.correo || !this.form.rol) {
-      this.error = 'Completa nombre, correo y rol.';
-      return;
-    }
-
-    if (!this.modoEdicion && !this.form.password) {
-      this.error = 'La contraseña temporal es obligatoria.';
-      return;
-    }
-
-    if (!this.modoEdicion && this.form.password.length < 8) {
-      this.error = 'La contraseña debe tener mínimo 8 caracteres.';
-      return;
-    }
-
+  save(): void {
+    if (this.saving || !this.validateForm()) return;
     const request: UserRequest = {
-      name: String(this.form.nombre).trim(),
-      email: String(this.form.correo).trim(),
-      password: this.form.password || undefined,
-      role: this.toApiRole(this.form.rol),
-      active: this.form.activo,
+      name: this.form.name.trim(),
+      email: this.form.email.trim().toLowerCase(),
+      role: this.form.role as UserRole,
+      active: this.form.active,
     };
+    if (this.form.password) request.password = this.form.password;
 
-    this.guardando = true;
-
-    const action$ =
-      this.modoEdicion && this.form.id
-        ? this.usuarioService.actualizar(this.form.id, request)
-        : this.usuarioService.crear(request);
-
-    action$.pipe(refreshView(this.cdr)).subscribe({
+    this.saving = true;
+    this.formError = '';
+    const operation = this.form.id
+      ? this.usuarioService.actualizar(this.form.id, request)
+      : this.usuarioService.crear(request);
+    operation.pipe(refreshView(this.cdr)).subscribe({
       next: () => {
-        this.guardando = false;
-        this.modalAbierto = false;
-        this.modoEdicion = false;
-        this.form = this.formVacio();
-        this.error = '';
-        this.cargarUsuarios();
+        this.saving = false;
+        this.modalOpen = false;
+        this.form = this.emptyForm();
+        this.load(false);
       },
       error: (err) => {
-        this.guardando = false;
-        this.error = err?.error?.message || 'No se pudo guardar el usuario.';
-        console.error('Error guardando usuario:', err);
+        this.saving = false;
+        this.formError = err?.error?.message || 'No fue posible guardar el usuario.';
       },
     });
   }
 
-  eliminar(u: any): void {
-    if (!u.id || this.guardando) {
-      return;
-    }
-
-    if (confirm(`¿Eliminar usuario "${u.nombre}"?`)) {
-      this.usuarioService
-        .eliminar(u.id)
-        .pipe(refreshView(this.cdr))
-        .subscribe({
-          next: () => this.cargarUsuarios(),
-          error: (err) => {
-            this.error = err?.error?.message || 'No se pudo eliminar el usuario.';
-            console.error('Error eliminando usuario:', err);
-          },
-        });
-    }
+  requestDelete(user: AppUser): void {
+    this.error = '';
+    this.deleteTarget = user;
   }
 
-  private actualizarStats(): void {
-    this.stats[0].value = String(this.usuarios.length);
-    this.stats[1].value = String(this.usuarios.filter((u) => u.activo).length);
-    this.stats[2].value = String(this.usuarios.filter((u) => u.rol === 'Administrador').length);
-    this.stats[3].value = String(this.usuarios.filter((u) => u.rol === 'Analista').length);
+  cancelDelete(): void {
+    if (!this.saving) this.deleteTarget = undefined;
   }
 
-  private toView(u: AppUser): any {
-    const rol = this.toViewRole(u.role);
-
-    return {
-      id: u.id,
-      nombre: u.name,
-      correo: u.email,
-      rol,
-      rolClass: rol === 'Administrador' ? 'rol-admin' : 'rol-analista',
-      ultimoAcceso: 'No registrado',
-      activo: u.active,
-      password: '',
-    };
+  confirmDelete(): void {
+    if (!this.deleteTarget || this.saving) return;
+    this.saving = true;
+    this.usuarioService
+      .eliminar(this.deleteTarget.id)
+      .pipe(refreshView(this.cdr))
+      .subscribe({
+        next: () => {
+          this.saving = false;
+          this.deleteTarget = undefined;
+          if (this.users.length === 1 && this.page > 0) this.page--;
+          this.load(false);
+        },
+        error: (err) => {
+          this.saving = false;
+          this.deleteTarget = undefined;
+          this.error = err?.error?.message || 'No fue posible eliminar el usuario.';
+        },
+      });
   }
 
-  private toViewRole(role: string): string {
+  roleLabel(role: UserRole): string {
     return role === 'ADMINISTRADOR' ? 'Administrador' : 'Analista';
   }
 
-  private toApiRole(role: string): UserRole {
-    return role === 'Administrador' ? 'ADMINISTRADOR' : 'ANALISTA';
+  trackById(_: number, user: AppUser): number {
+    return user.id;
   }
 
-  private formVacio() {
-    return {
-      id: null as number | null,
-      nombre: '',
-      correo: '',
-      rol: '',
-      rolClass: '',
-      activo: true,
-      password: '',
-    };
+  private validateForm(): boolean {
+    this.formError = '';
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!this.form.name.trim() || !this.form.email.trim() || !this.form.role) {
+      this.formError = 'Completa el nombre, correo y rol.';
+      return false;
+    }
+    if (!emailPattern.test(this.form.email.trim())) {
+      this.formError = 'Ingresa un correo electrónico válido.';
+      return false;
+    }
+    if (!this.form.id && this.form.password.length < 8) {
+      this.formError = 'La contraseña temporal debe tener al menos 8 caracteres.';
+      return false;
+    }
+    if (this.form.password && this.form.password.length < 8) {
+      this.formError = 'La nueva contraseña debe tener al menos 8 caracteres.';
+      return false;
+    }
+    return true;
+  }
+
+  private emptyForm(): UserForm {
+    return { id: null, name: '', email: '', role: '', active: true, password: '' };
   }
 }

@@ -1,5 +1,130 @@
-<div class="page-header"><div><h1>Registro de Auditoría</h1><p>Seguimiento completo de actividades del sistema (FR-12)</p></div><button class="btn-outline" (click)="cargar()">🔄 Recargar</button></div>
-<div class="stats-grid"><div class="stat-card" *ngFor="let s of stats"><div class="stat-top"><div><div class="stat-label">{{ s.label }}</div><div class="stat-value" [ngClass]="s.valueClass">{{ s.value | number }}</div><div class="stat-sub">{{ s.sub }}</div></div><div class="stat-icon" [ngClass]="s.iconClass">{{ s.icon }}</div></div></div></div>
-<div class="card filters-card"><div class="filter-group"><label>Usuario</label><div class="input-icon"><span>👤</span><input type="text" placeholder="Filtrar por usuario..." [(ngModel)]="filtroUsuario" /></div></div><div class="filter-group"><label>Acción</label><select [(ngModel)]="filtroAccion"><option value="">Todas las acciones</option><option>CREATE</option><option>UPDATE</option><option>DELETE</option><option>SYNC</option><option>LOGIN</option></select></div><div class="filter-group"><label>Entidad</label><select [(ngModel)]="filtroEntidad"><option value="">Todas las entidades</option><option>AppUser</option><option>Party</option><option>Candidate</option><option>Election</option><option>Poll</option><option>OfficialResult</option><option>Registraduria</option></select></div><div class="filter-group"><label>Estado</label><select [(ngModel)]="filtroEstado"><option value="">Todos</option><option>Exitoso</option><option>Fallido</option></select></div></div>
-<div class="card"><h3>Registro de Eventos</h3><p *ngIf="error" style="color:#dc2626">{{ error }}</p><table class="admin-table"><thead><tr><th>Fecha y Hora</th><th>Usuario</th><th>Acción</th><th>Entidad</th><th>Detalles</th><th>IP</th><th>Estado</th></tr></thead><tbody><tr *ngFor="let e of eventosFiltrados"><td class="td-fecha">{{ e.at | date:'short' }}</td><td class="td-usuario"><span>👤</span> {{ e.username || 'Sistema' }}</td><td><span class="accion-badge" [ngClass]="getAccionClass(e.action)">{{ e.action }}</span></td><td>{{ e.entity }}</td><td class="td-detalle">{{ e.details }}</td><td class="td-ip">{{ e.ip }}</td><td><span [ngClass]="e.success ? 'badge-exitoso' : 'badge-fallido'">{{ e.success ? 'Exitoso' : 'Fallido' }}</span></td></tr></tbody></table></div>
-<div class="card"><h3>Características de Seguridad y Auditoría</h3><div class="seg-grid"><div class="seg-card blue"><div class="seg-title">🛡 Registro Completo</div><div class="seg-desc">Todas las operaciones CRUD son registradas con timestamp, usuario y dirección IP.</div></div><div class="seg-card purple"><div class="seg-title">🗃 Inmutabilidad</div><div class="seg-desc">Los registros de auditoría se consultan desde backend.</div></div><div class="seg-card green"><div class="seg-title">📄 Trazabilidad Completa</div><div class="seg-desc">Cada cambio en el sistema puede ser rastreado.</div></div><div class="seg-card orange"><div class="seg-title">🔍 Cumplimiento</div><div class="seg-desc">Soporta transparencia electoral y seguimiento administrativo.</div></div></div></div>
+<header class="page-header">
+  <div>
+    <h1>Registro de Auditoría</h1>
+    <p>Consulta trazable de las actividades administrativas del sistema.</p>
+  </div>
+  <button class="btn-outline" type="button" (click)="load(true)" [disabled]="loading || refreshing">
+    {{ refreshing ? 'Actualizando…' : '↻ Actualizar' }}
+  </button>
+</header>
+
+<section class="stats-grid" aria-label="Resumen de auditoría">
+  <article class="stat-card" *ngFor="let stat of stats">
+    <div>
+      <span class="stat-label">{{ stat.label }}</span>
+      <strong class="stat-value" [class.red]="stat.valueClass === 'red'">{{ stat.value | number }}</strong>
+      <span class="stat-sub">{{ stat.sub }}</span>
+    </div>
+    <span class="stat-icon" [ngClass]="stat.iconClass" aria-hidden="true">{{ stat.icon }}</span>
+  </article>
+</section>
+
+<section class="card filters-card" aria-label="Filtros de auditoría">
+  <div class="filter-group search-group">
+    <label for="audit-search">Usuario, detalle o IP</label>
+    <input
+      id="audit-search"
+      type="search"
+      [(ngModel)]="search"
+      placeholder="Buscar en auditoría…"
+      (keyup.enter)="applyFilters()"
+    />
+  </div>
+  <div class="filter-group">
+    <label for="audit-action">Acción</label>
+    <select id="audit-action" [(ngModel)]="action" (change)="applyFilters()">
+      <option value="">Todas</option>
+      <option *ngFor="let option of management?.actions" [value]="option">{{ option }}</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <label for="audit-entity">Entidad</label>
+    <select id="audit-entity" [(ngModel)]="entity" (change)="applyFilters()">
+      <option value="">Todas</option>
+      <option *ngFor="let option of management?.entities" [value]="option">{{ option }}</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <label for="audit-status">Resultado</label>
+    <select id="audit-status" [(ngModel)]="status" (change)="applyFilters()">
+      <option value="">Todos</option>
+      <option value="true">Exitoso</option>
+      <option value="false">Fallido</option>
+    </select>
+  </div>
+  <div class="filter-actions">
+    <button class="btn-primary" type="button" (click)="applyFilters()">Aplicar</button>
+    <button class="btn-link" type="button" (click)="clearFilters()">Limpiar</button>
+  </div>
+</section>
+
+<div class="alert error" *ngIf="error" role="alert">
+  <span>{{ error }}</span>
+  <button type="button" (click)="load(false)">Reintentar</button>
+</div>
+
+<section class="card event-card" aria-labelledby="event-title">
+  <div class="section-header">
+    <div>
+      <h2 id="event-title">Registro de eventos</h2>
+      <p *ngIf="management">{{ management.events.totalElements | number }} evento(s) encontrados</p>
+    </div>
+  </div>
+
+  <div class="loading-state" *ngIf="loading && !management" aria-live="polite">Cargando auditoría…</div>
+
+  <div class="empty-state" *ngIf="!loading && management && events.length === 0">
+    <strong>No hay eventos para los filtros seleccionados.</strong>
+    <span>Prueba limpiando los filtros o actualizando la consulta.</span>
+  </div>
+
+  <div class="table-wrap" *ngIf="events.length > 0">
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th>Fecha y hora</th>
+          <th>Usuario</th>
+          <th>Acción</th>
+          <th>Entidad</th>
+          <th>Detalle</th>
+          <th>IP</th>
+          <th>Resultado</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let event of events; trackBy: trackById">
+          <td class="nowrap">{{ event.at | date: 'dd/MM/yyyy, h:mm a' }}</td>
+          <td>{{ event.username }}</td>
+          <td><span class="action-badge" [ngClass]="actionClass(event.action)">{{ event.action }}</span></td>
+          <td>
+            <span>{{ event.entity }}</span>
+            <small *ngIf="event.entityId">#{{ event.entityId }}</small>
+          </td>
+          <td class="detail-cell">{{ event.details }}</td>
+          <td class="ip-cell">{{ event.ip }}</td>
+          <td>
+            <span class="status-badge" [class.success]="event.success" [class.failed]="!event.success">
+              {{ event.success ? 'Exitoso' : 'Fallido' }}
+            </span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <nav class="pagination" *ngIf="totalPages > 1" aria-label="Paginación de auditoría">
+    <button type="button" (click)="changePage(page - 1)" [disabled]="page === 0 || loading">Anterior</button>
+    <span>Página {{ page + 1 }} de {{ totalPages }}</span>
+    <button type="button" (click)="changePage(page + 1)" [disabled]="page + 1 >= totalPages || loading">Siguiente</button>
+  </nav>
+</section>
+
+<section class="card security-card" aria-labelledby="security-title">
+  <h2 id="security-title">Controles de seguridad y trazabilidad</h2>
+  <div class="security-grid">
+    <article><strong>Registro persistente</strong><span>Las operaciones administrativas quedan asociadas a usuario, fecha y origen.</span></article>
+    <article><strong>Inmutabilidad</strong><span>PostgreSQL bloquea la actualización y eliminación de eventos ya registrados.</span></article>
+    <article><strong>Filtros reproducibles</strong><span>La búsqueda y paginación se ejecutan en backend sobre los datos persistidos.</span></article>
+    <article><strong>Acceso restringido</strong><span>La consulta está disponible únicamente para administradores autenticados.</span></article>
+  </div>
+</section>

@@ -36,7 +36,7 @@ export class ResultadosAnalista implements OnInit {
         next: (data) => {
           this.resultados = [...data].sort(
             (a, b) =>
-              this.time(b.importedAt || b.createdAt) - this.time(a.importedAt || a.createdAt),
+              this.time(b.importedAt) - this.time(a.importedAt),
           );
           this.error = '';
         },
@@ -48,7 +48,13 @@ export class ResultadosAnalista implements OnInit {
   }
 
   get departamentos(): string[] {
-    return [...new Set(this.resultados.map((r) => r.department).filter(Boolean))].sort();
+    return [
+      ...new Set(
+        this.resultados
+          .map((result) => result.department)
+          .filter((department): department is string => !!department),
+      ),
+    ].sort();
   }
 
   get resultadosFiltrados(): OfficialResult[] {

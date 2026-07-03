@@ -1,207 +1,480 @@
-<div class="page-header">
-  <div>
-    <h1>Gestión de Elecciones</h1>
-    <p>Configurar y administrar procesos electorales</p>
-  </div>
-
-  <button class="btn-primary" (click)="abrirModal()">+ Nueva Elección</button>
-</div>
-
-<div class="stats-grid">
-  <div class="stat-card">
-    <div class="stat-top">
-      <div>
-        <div class="stat-label">Elecciones Activas</div>
-        <div class="stat-value">{{ activas }}</div>
-        <div class="stat-sub">En conteo en vivo</div>
-      </div>
-      <div class="stat-icon icon-blue">🗳</div>
-    </div>
-  </div>
-
-  <div class="stat-card">
-    <div class="stat-top">
-      <div>
-        <div class="stat-label">Programadas</div>
-        <div class="stat-value">{{ programadas }}</div>
-        <div class="stat-sub">Configuradas</div>
-      </div>
-      <div class="stat-icon icon-green">📅</div>
-    </div>
-  </div>
-
-  <div class="stat-card">
-    <div class="stat-top">
-      <div>
-        <div class="stat-label">Total Elecciones</div>
-        <div class="stat-value">{{ elecciones.length }}</div>
-        <div class="stat-sub">Registradas</div>
-      </div>
-      <div class="stat-icon icon-purple">📍</div>
-    </div>
-  </div>
-
-  <div class="stat-card">
-    <div class="stat-top">
-      <div>
-        <div class="stat-label">Eventos de Auditoría</div>
-        <div class="stat-value">{{ eventosAuditoria }}</div>
-        <div class="stat-sub">Registros persistidos</div>
-      </div>
-      <div class="stat-icon icon-orange">⚙</div>
-    </div>
-  </div>
-</div>
-
-<div class="card">
-  <div class="card-header">
-    <h3>Elecciones Configuradas</h3>
-    <button class="btn-outline" (click)="cargar()">🔄 Recargar</button>
-  </div>
-
-  <p *ngIf="error" style="color:#dc2626">{{ error }}</p>
-
-  <table class="admin-table">
-    <thead>
-      <tr>
-        <th>Nombre</th>
-        <th>Tipo</th>
-        <th>Fecha</th>
-        <th>Ronda</th>
-        <th>Progreso</th>
-        <th>Estado</th>
-        <th>Acciones</th>
-      </tr>
-    </thead>
-
-    <tbody>
-      <tr *ngFor="let e of elecciones">
-        <td class="td-bold">{{ e.name }}</td>
-
-        <td>
-          <span class="tag" [ngClass]="tipoClass(e.type)">
-            {{ toVistaTipo(e.type) }}
-          </span>
-        </td>
-
-        <td>📅 {{ e.electionDate }}</td>
-
-        <td>{{ toVistaRonda(e.round) }}</td>
-
-        <td>
-          <ng-container *ngIf="progreso(e) > 0; else sinIniciar">
-            <div class="prog-wrap">
-              <div class="prog-bar">
-                <div class="prog-fill" [style.width]="progreso(e) + '%'"></div>
-              </div>
-              <span>{{ progreso(e) }}%</span>
-            </div>
-          </ng-container>
-
-          <ng-template #sinIniciar>
-            <span class="td-gray">Sin iniciar</span>
-          </ng-template>
-        </td>
-
-        <td>
-          <span
-            [ngClass]="
-              e.state === 'ABIERTA' || e.state === 'EN_CONTEO'
-                ? 'badge-activo'
-                : e.state === 'CERRADA' || e.state === 'ARCHIVADA'
-                  ? 'badge-finalizada'
-                  : 'badge-programada'
-            "
-          >
-            {{ toVistaEstado(e.state) }}
-          </span>
-        </td>
-
-        <td class="td-actions">
-          <button class="icon-btn edit" (click)="abrirModal(e)">✏</button>
-          <button class="icon-btn del" (click)="eliminar(e)">🗑</button>
-        </td>
-      </tr>
-    </tbody>
-  </table>
-</div>
-
-<div class="card">
-  <h3>Distribución por Estado</h3>
-
-  <div class="config-grid">
-    <div class="config-card" *ngFor="let c of resumenEstados">
-      <div class="cfg-icon">{{ c.icon }}</div>
-      <div class="cfg-title">{{ c.titulo }}</div>
-      <div class="cfg-sub">{{ c.descripcion }}</div>
-    </div>
-  </div>
-</div>
-
-<div class="modal-overlay" *ngIf="modalAbierto" (click)="cerrarModal()">
-  <div class="modal" (click)="$event.stopPropagation()">
-    <div class="modal-header">
-      <h3>{{ modoEdicion ? 'Editar Elección' : 'Nueva Elección' }}</h3>
-      <button class="modal-close" (click)="cerrarModal()">✕</button>
+<section class="elections-page">
+  <header class="page-header elections-header">
+    <div>
+      <p class="eyebrow">Administración del calendario electoral</p>
+      <h1>Gestión de elecciones</h1>
+      <p>Configura procesos electorales, controla su avance y conserva la trazabilidad.</p>
     </div>
 
-    <div class="modal-body">
-      <p *ngIf="error" style="color:#dc2626">{{ error }}</p>
-
-      <div class="form-group">
-        <label>Nombre de la Elección <span class="req">*</span></label>
-        <input
-          type="text"
-          [(ngModel)]="form.nombre"
-          placeholder="Nombre de la elección"
-        />
+    <div class="header-actions">
+      <div class="generated-at" *ngIf="management.generatedAt">
+        Actualizado {{ formatDateTime(management.generatedAt) }}
       </div>
-
-      <div class="form-row">
-        <div class="form-group">
-          <label>Tipo <span class="req">*</span></label>
-          <select [(ngModel)]="form.tipo">
-            <option value="">Seleccionar...</option>
-            <option value="Presidencia">Presidencia</option>
-            <option value="Senado">Senado</option>
-            <option value="Cámara">Cámara</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label>Ronda</label>
-          <select [(ngModel)]="form.ronda">
-            <option value="Ninguna">Ninguna</option>
-            <option value="Primera Vuelta">Primera Vuelta</option>
-            <option value="Segunda Vuelta">Segunda Vuelta</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="form-row">
-        <div class="form-group">
-          <label>Fecha <span class="req">*</span></label>
-          <input type="date" [(ngModel)]="form.fecha" />
-        </div>
-
-        <div class="form-group">
-          <label>Estado</label>
-          <select [(ngModel)]="form.estado">
-            <option value="Programada">Programada</option>
-            <option value="Abierta">Abierta</option>
-            <option value="En Conteo">En Conteo</option>
-            <option value="Cerrada">Cerrada</option>
-            <option value="Archivada">Archivada</option>
-          </select>
-        </div>
-      </div>
-    </div>
-
-    <div class="modal-footer">
-      <button class="btn-outline" (click)="cerrarModal()">Cancelar</button>
-      <button class="btn-primary" (click)="guardar()">
-        {{ modoEdicion ? 'Guardar Cambios' : 'Crear Elección' }}
+      <button type="button" class="btn-primary" (click)="openEditor()">
+        <span aria-hidden="true">＋</span> Nueva elección
       </button>
     </div>
+  </header>
+
+  <div class="notice success-notice" *ngIf="success" role="status" aria-live="polite">
+    <span aria-hidden="true">✓</span>
+    <span>{{ success }}</span>
+    <button type="button" (click)="success = ''" aria-label="Cerrar mensaje">×</button>
   </div>
+
+  <div class="notice error-notice" *ngIf="error" role="alert">
+    <span aria-hidden="true">!</span>
+    <span>{{ error }}</span>
+    <button type="button" (click)="error = ''" aria-label="Cerrar mensaje">×</button>
+  </div>
+
+  <section class="stats-grid" aria-label="Resumen de elecciones">
+    <article class="stat-card">
+      <div>
+        <div class="stat-label">Total de elecciones</div>
+        <div class="stat-value">{{ management.counters.total }}</div>
+        <div class="stat-sub">Procesos registrados</div>
+      </div>
+      <div class="stat-icon icon-purple" aria-hidden="true">▦</div>
+    </article>
+
+    <article class="stat-card">
+      <div>
+        <div class="stat-label">En curso</div>
+        <div class="stat-value">{{ activeCount }}</div>
+        <div class="stat-sub">Abiertas o en conteo</div>
+      </div>
+      <div class="stat-icon icon-green" aria-hidden="true">●</div>
+    </article>
+
+    <article class="stat-card">
+      <div>
+        <div class="stat-label">Configuradas</div>
+        <div class="stat-value">{{ management.counters.configured }}</div>
+        <div class="stat-sub">Pendientes de apertura</div>
+      </div>
+      <div class="stat-icon icon-blue" aria-hidden="true">▣</div>
+    </article>
+
+    <article class="stat-card">
+      <div>
+        <div class="stat-label">Finalizadas</div>
+        <div class="stat-value">{{ completedCount }}</div>
+        <div class="stat-sub">Cerradas o archivadas</div>
+      </div>
+      <div class="stat-icon icon-orange" aria-hidden="true">✓</div>
+    </article>
+  </section>
+
+  <section class="card state-overview" aria-labelledby="state-overview-title">
+    <div class="section-heading">
+      <div>
+        <h2 id="state-overview-title">Distribución por estado</h2>
+        <p>Selecciona un estado para filtrar la lista.</p>
+      </div>
+      <button type="button" class="text-button" (click)="filterByState('ALL')">
+        Ver todas
+      </button>
+    </div>
+
+    <div class="state-grid">
+      <button
+        type="button"
+        class="state-card state-configurada"
+        [class.selected]="stateFilter === 'CONFIGURADA'"
+        (click)="filterByState('CONFIGURADA')"
+      >
+        <span class="state-dot" aria-hidden="true"></span>
+        <span><strong>{{ management.counters.configured }}</strong> Configuradas</span>
+      </button>
+      <button
+        type="button"
+        class="state-card state-abierta"
+        [class.selected]="stateFilter === 'ABIERTA'"
+        (click)="filterByState('ABIERTA')"
+      >
+        <span class="state-dot" aria-hidden="true"></span>
+        <span><strong>{{ management.counters.open }}</strong> Abiertas</span>
+      </button>
+      <button
+        type="button"
+        class="state-card state-en-conteo"
+        [class.selected]="stateFilter === 'EN_CONTEO'"
+        (click)="filterByState('EN_CONTEO')"
+      >
+        <span class="state-dot" aria-hidden="true"></span>
+        <span><strong>{{ management.counters.counting }}</strong> En conteo</span>
+      </button>
+      <button
+        type="button"
+        class="state-card state-cerrada"
+        [class.selected]="stateFilter === 'CERRADA'"
+        (click)="filterByState('CERRADA')"
+      >
+        <span class="state-dot" aria-hidden="true"></span>
+        <span><strong>{{ management.counters.closed }}</strong> Cerradas</span>
+      </button>
+      <button
+        type="button"
+        class="state-card state-archivada"
+        [class.selected]="stateFilter === 'ARCHIVADA'"
+        (click)="filterByState('ARCHIVADA')"
+      >
+        <span class="state-dot" aria-hidden="true"></span>
+        <span><strong>{{ management.counters.archived }}</strong> Archivadas</span>
+      </button>
+    </div>
+  </section>
+
+  <section class="card elections-list" aria-labelledby="elections-list-title">
+    <div class="list-heading">
+      <div>
+        <h2 id="elections-list-title">Elecciones registradas</h2>
+        <p>{{ filteredElections.length }} resultado(s) según los filtros actuales.</p>
+      </div>
+      <button
+        type="button"
+        class="btn-outline"
+        (click)="load(false)"
+        [disabled]="refreshing"
+      >
+        <span aria-hidden="true">↻</span>
+        {{ refreshing ? 'Actualizando…' : 'Actualizar' }}
+      </button>
+    </div>
+
+    <div class="filters" aria-label="Filtros de elecciones">
+      <label class="search-field">
+        <span class="sr-only">Buscar elecciones</span>
+        <span aria-hidden="true">⌕</span>
+        <input
+          type="search"
+          [(ngModel)]="search"
+          (ngModelChange)="filtersChanged()"
+          placeholder="Buscar por nombre, fecha o estado"
+        />
+      </label>
+
+      <label>
+        <span class="sr-only">Filtrar por tipo</span>
+        <select [(ngModel)]="typeFilter" (ngModelChange)="filtersChanged()">
+          <option value="ALL">Todos los tipos</option>
+          <option value="PRESIDENCIA">Presidencia</option>
+          <option value="SENADO">Senado</option>
+          <option value="CAMARA">Cámara</option>
+        </select>
+      </label>
+
+      <label>
+        <span class="sr-only">Filtrar por estado</span>
+        <select [(ngModel)]="stateFilter" (ngModelChange)="filtersChanged()">
+          <option value="ALL">Todos los estados</option>
+          <option value="CONFIGURADA">Configuradas</option>
+          <option value="ABIERTA">Abiertas</option>
+          <option value="EN_CONTEO">En conteo</option>
+          <option value="CERRADA">Cerradas</option>
+          <option value="ARCHIVADA">Archivadas</option>
+        </select>
+      </label>
+
+      <label>
+        <span class="sr-only">Filtrar por resumen electoral</span>
+        <select [(ngModel)]="summaryFilter" (ngModelChange)="filtersChanged()">
+          <option value="ALL">Con o sin resumen</option>
+          <option value="WITH">Con resumen electoral</option>
+          <option value="WITHOUT">Sin resumen electoral</option>
+        </select>
+      </label>
+
+      <button type="button" class="clear-button" (click)="clearFilters()">
+        Limpiar filtros
+      </button>
+    </div>
+
+    <div class="loading-state" *ngIf="loading">
+      <span class="spinner" aria-hidden="true"></span>
+      <p>Cargando elecciones registradas…</p>
+    </div>
+
+    <div class="empty-state" *ngIf="!loading && filteredElections.length === 0">
+      <div class="empty-icon" aria-hidden="true">▦</div>
+      <h3>No hay elecciones para mostrar</h3>
+      <p *ngIf="elections.length > 0">Modifica o limpia los filtros para ver otros resultados.</p>
+      <p *ngIf="elections.length === 0">Crea la primera elección para comenzar la configuración electoral.</p>
+      <button type="button" class="btn-primary" *ngIf="elections.length === 0" (click)="openEditor()">
+        Crear elección
+      </button>
+    </div>
+
+    <div class="table-wrapper" *ngIf="!loading && filteredElections.length > 0">
+      <table class="elections-table">
+        <thead>
+          <tr>
+            <th>Elección</th>
+            <th>Fecha y estructura</th>
+            <th>Avance</th>
+            <th>Información asociada</th>
+            <th>Estado</th>
+            <th class="actions-column">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let election of pagedElections">
+            <td>
+              <div class="election-name">{{ election.name }}</div>
+              <div class="row-meta">Creada para {{ typeLabel(election.type).toLowerCase() }}</div>
+            </td>
+            <td>
+              <div class="date-value">{{ formatDate(election.electionDate) }}</div>
+              <div class="tag-row">
+                <span class="type-badge" [ngClass]="typeClass(election.type)">
+                  {{ typeLabel(election.type) }}
+                </span>
+                <span class="round-label">{{ roundLabel(election.round) }}</span>
+              </div>
+            </td>
+            <td>
+              <div class="progress-head">
+                <span>{{ progressLabel(election) }}</span>
+                <span *ngIf="election.summaryAvailable">
+                  {{ election.reportedTables | number:'1.0-0' }} / {{ election.totalTables | number:'1.0-0' }} mesas
+                </span>
+              </div>
+              <div class="progress-track" *ngIf="election.summaryAvailable" aria-hidden="true">
+                <div class="progress-value" [style.width.%]="election.progress || 0"></div>
+              </div>
+              <small *ngIf="!election.summaryAvailable">Aún no hay consolidado de resultados.</small>
+            </td>
+            <td>
+              <div class="dependency-list">
+                <span><strong>{{ election.candidateCount }}</strong> candidatos</span>
+                <span><strong>{{ election.officialResultCount }}</strong> resultados</span>
+                <span *ngIf="election.assistantSessionCount > 0">
+                  <strong>{{ election.assistantSessionCount }}</strong> consultas
+                </span>
+              </div>
+            </td>
+            <td>
+              <span class="state-badge" [ngClass]="stateClass(election.state)">
+                <span class="state-dot" aria-hidden="true"></span>
+                {{ stateLabel(election.state) }}
+              </span>
+              <small class="state-help">{{ stateDescription(election.state) }}</small>
+            </td>
+            <td class="row-actions">
+              <button
+                type="button"
+                class="icon-button"
+                (click)="openEditor(election)"
+                [attr.aria-label]="'Editar ' + election.name"
+                title="Editar elección"
+              >
+                ✎
+              </button>
+              <button
+                type="button"
+                class="icon-button danger"
+                (click)="requestDelete(election)"
+                [class.disabled-look]="!election.deletable"
+                [attr.aria-label]="'Eliminar ' + election.name"
+                [attr.title]="election.deletable ? 'Eliminar elección' : 'La elección tiene información asociada'"
+              >
+                ⌫
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="mobile-list" *ngIf="!loading && filteredElections.length > 0">
+      <article class="election-mobile-card" *ngFor="let election of pagedElections">
+        <div class="mobile-card-head">
+          <div>
+            <h3>{{ election.name }}</h3>
+            <p>{{ formatDate(election.electionDate) }} · {{ roundLabel(election.round) }}</p>
+          </div>
+          <span class="state-badge" [ngClass]="stateClass(election.state)">
+            <span class="state-dot" aria-hidden="true"></span>
+            {{ stateLabel(election.state) }}
+          </span>
+        </div>
+
+        <div class="mobile-tags">
+          <span class="type-badge" [ngClass]="typeClass(election.type)">{{ typeLabel(election.type) }}</span>
+          <span>{{ election.candidateCount }} candidatos</span>
+          <span>{{ election.officialResultCount }} resultados</span>
+        </div>
+
+        <div class="mobile-progress">
+          <div>
+            <span>Avance</span>
+            <strong>{{ progressLabel(election) }}</strong>
+          </div>
+          <div class="progress-track" *ngIf="election.summaryAvailable">
+            <div class="progress-value" [style.width.%]="election.progress || 0"></div>
+          </div>
+        </div>
+
+        <div class="mobile-actions">
+          <button type="button" class="btn-outline" (click)="openEditor(election)">Editar</button>
+          <button
+            type="button"
+            class="btn-outline danger-outline"
+            (click)="requestDelete(election)"
+          >
+            Eliminar
+          </button>
+        </div>
+      </article>
+    </div>
+
+    <footer class="pagination" *ngIf="filteredElections.length > 0">
+      <span>Mostrando {{ visibleFrom }}–{{ visibleTo }} de {{ filteredElections.length }}</span>
+      <div>
+        <button type="button" (click)="previousPage()" [disabled]="page === 1" aria-label="Página anterior">‹</button>
+        <span>Página {{ page }} de {{ totalPages }}</span>
+        <button type="button" (click)="nextPage()" [disabled]="page === totalPages" aria-label="Página siguiente">›</button>
+      </div>
+    </footer>
+  </section>
+</section>
+
+<div class="modal-overlay" *ngIf="editorOpen" (click)="closeEditor()">
+  <section
+    class="modal election-modal"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="election-editor-title"
+    (click)="$event.stopPropagation()"
+  >
+    <header class="modal-header">
+      <div>
+        <p class="modal-eyebrow">{{ editMode ? 'Actualizar proceso' : 'Nuevo proceso electoral' }}</p>
+        <h2 id="election-editor-title">{{ editMode ? 'Editar elección' : 'Crear elección' }}</h2>
+      </div>
+      <button type="button" class="modal-close" (click)="closeEditor()" aria-label="Cerrar">×</button>
+    </header>
+
+    <div class="modal-body">
+      <div class="form-intro" *ngIf="!editMode">
+        Las elecciones nuevas se crean en estado <strong>Configurada</strong>. El estado puede avanzar cuando el proceso esté listo.
+      </div>
+
+      <div class="form-intro warning" *ngIf="structuralFieldsDisabled">
+        Esta elección ya tiene información asociada. El tipo, la ronda y la fecha están protegidos para evitar inconsistencias.
+      </div>
+
+      <div class="form-group full-width">
+        <label for="election-name">Nombre de la elección <span class="req">*</span></label>
+        <input
+          id="election-name"
+          type="text"
+          maxlength="180"
+          [(ngModel)]="form.name"
+          [class.input-error]="fieldErrors.name"
+          placeholder="Ej. Presidencia Colombia 2030 - Primera vuelta"
+        />
+        <small class="field-error" *ngIf="fieldErrors.name">{{ fieldErrors.name }}</small>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="election-type">Tipo <span class="req">*</span></label>
+          <select
+            id="election-type"
+            [(ngModel)]="form.type"
+            (ngModelChange)="typeChanged()"
+            [disabled]="structuralFieldsDisabled"
+            [class.input-error]="fieldErrors.type"
+          >
+            <option value="PRESIDENCIA">Presidencia</option>
+            <option value="SENADO">Senado</option>
+            <option value="CAMARA">Cámara</option>
+          </select>
+          <small class="field-error" *ngIf="fieldErrors.type">{{ fieldErrors.type }}</small>
+        </div>
+
+        <div class="form-group">
+          <label for="election-round">Ronda <span class="req">*</span></label>
+          <select
+            id="election-round"
+            [(ngModel)]="form.round"
+            [disabled]="structuralFieldsDisabled || form.type !== 'PRESIDENCIA'"
+            [class.input-error]="fieldErrors.round"
+          >
+            <option value="NINGUNA" *ngIf="form.type !== 'PRESIDENCIA'">No aplica</option>
+            <option value="PRIMERA" *ngIf="form.type === 'PRESIDENCIA'">Primera vuelta</option>
+            <option value="SEGUNDA" *ngIf="form.type === 'PRESIDENCIA'">Segunda vuelta</option>
+          </select>
+          <small class="field-error" *ngIf="fieldErrors.round">{{ fieldErrors.round }}</small>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="election-date">Fecha <span class="req">*</span></label>
+          <input
+            id="election-date"
+            type="date"
+            [(ngModel)]="form.electionDate"
+            [disabled]="structuralFieldsDisabled"
+            [class.input-error]="fieldErrors.electionDate"
+          />
+          <small class="field-error" *ngIf="fieldErrors.electionDate">{{ fieldErrors.electionDate }}</small>
+        </div>
+
+        <div class="form-group">
+          <label for="election-state">Estado <span class="req">*</span></label>
+          <select
+            id="election-state"
+            [(ngModel)]="form.state"
+            [disabled]="!editMode || stateOptions.length === 1"
+            [class.input-error]="fieldErrors.state"
+          >
+            <option *ngFor="let state of stateOptions" [value]="state">
+              {{ stateLabel(state) }}
+            </option>
+          </select>
+          <small *ngIf="editMode && stateOptions.length === 1">No hay transiciones disponibles desde este estado.</small>
+          <small class="field-error" *ngIf="fieldErrors.state">{{ fieldErrors.state }}</small>
+        </div>
+      </div>
+
+      <div class="dependency-summary" *ngIf="selectedElection">
+        <div><strong>{{ selectedElection.candidateCount }}</strong><span>Candidatos</span></div>
+        <div><strong>{{ selectedElection.officialResultCount }}</strong><span>Resultados</span></div>
+        <div><strong>{{ selectedElection.summaryAvailable ? 'Sí' : 'No' }}</strong><span>Resumen electoral</span></div>
+      </div>
+    </div>
+
+    <footer class="modal-footer">
+      <button type="button" class="btn-outline" (click)="closeEditor()" [disabled]="saving">Cancelar</button>
+      <button type="button" class="btn-primary" (click)="save()" [disabled]="saving">
+        {{ saving ? 'Guardando…' : editMode ? 'Guardar cambios' : 'Crear elección' }}
+      </button>
+    </footer>
+  </section>
+</div>
+
+<div class="modal-overlay" *ngIf="deleteOpen" (click)="closeDelete()">
+  <section
+    class="modal confirm-modal"
+    role="alertdialog"
+    aria-modal="true"
+    aria-labelledby="delete-election-title"
+    (click)="$event.stopPropagation()"
+  >
+    <div class="confirm-icon" aria-hidden="true">!</div>
+    <h2 id="delete-election-title">Eliminar elección</h2>
+    <p>
+      ¿Confirmas que deseas eliminar <strong>{{ electionToDelete?.name }}</strong>? Esta acción no se puede deshacer.
+    </p>
+    <div class="modal-footer centered">
+      <button type="button" class="btn-outline" (click)="closeDelete()" [disabled]="deleting">Cancelar</button>
+      <button type="button" class="danger-button" (click)="confirmDelete()" [disabled]="deleting">
+        {{ deleting ? 'Eliminando…' : 'Eliminar elección' }}
+      </button>
+    </div>
+  </section>
 </div>

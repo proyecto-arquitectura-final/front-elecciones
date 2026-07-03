@@ -1,10 +1,1 @@
 @use '../admin-shared' as *;
-
-.alert-success {
-  color: #166534;
-  background: var(--app-success-soft);
-  border: 1px solid #bbf7d0;
-  border-radius: 8px;
-  padding: 10px 12px;
-  margin-bottom: 12px;
-}

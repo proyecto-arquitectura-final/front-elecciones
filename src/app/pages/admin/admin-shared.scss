@@ -28,7 +28,7 @@
   border-radius: 14px;
   padding: 20px;
   border: 1px solid var(--app-surface-muted);
-  box-shadow: 0 2px 8px rgba(0,0,0,.05);
+  box-shadow: var(--app-shadow-soft);
 }
 
 .stat-top {
@@ -40,9 +40,9 @@
 .stat-label { font-size: 0.75rem; color: var(--app-text-muted); margin-bottom: 6px; }
 .stat-value {
   font-size: 1.75rem; font-weight: 800;
-  &.red    { color: #dc2626; }
+  &.red    { color: var(--app-danger-text); }
   &.orange { color: #d97706; }
-  &.green  { color: #16a34a; }
+  &.green  { color: var(--app-success-text); }
 }
 .stat-sub { font-size: 0.6875rem; color: var(--app-text-subtle); margin-top: 4px; }
 
@@ -122,8 +122,8 @@
 
 // ─── BUTTONS ──────────────────────────────────────────────
 .btn-primary {
-  background: #2563eb;
-  color: white;
+  background: var(--app-primary);
+  color: var(--app-on-primary);
   border: none;
   border-radius: 10px;
   padding: 9px 18px;
@@ -164,9 +164,9 @@
   cursor: pointer; font-size: 0.875rem;
   display: flex; align-items: center; justify-content: center;
   transition: .2s;
-  &.edit:hover { background: var(--app-primary-soft); border-color: #bfdbfe; }
-  &.del:hover  { background: var(--app-danger-soft); border-color: #fca5a5; }
-  &.cfg:hover  { background: var(--app-purple-soft); border-color: #c4b5fd; }
+  &.edit:hover { background: var(--app-primary-soft); border-color: var(--app-info-border); }
+  &.del:hover  { background: var(--app-danger-soft); border-color: var(--app-danger-border); }
+  &.cfg:hover  { background: var(--app-purple-soft); border-color: var(--app-purple-border); }
 }
 
 .btn-detalle {
@@ -176,7 +176,7 @@
   padding: 5px 12px;
   font-size: 0.75rem;
   cursor: pointer;
-  color: #2563eb;
+  color: var(--app-primary-text);
   font-weight: 600;
   &:hover { background: var(--app-primary-soft); }
 }
@@ -210,7 +210,7 @@
     background: var(--app-surface-soft);
     outline: none;
     cursor: pointer;
-    &:focus { border-color: #2563eb; }
+    &:focus { border-color: var(--app-primary-text); }
   }
 }
 
@@ -234,7 +234,7 @@
       font-size: 0.8125rem;
       background: var(--app-surface-soft);
       outline: none;
-      &:focus { border-color: #2563eb; }
+      &:focus { border-color: var(--app-primary-text); }
     }
   }
 }
@@ -251,28 +251,28 @@
 }
 
 // ─── BADGES ───────────────────────────────────────────────
-.badge-activo    { background: var(--app-success-soft); color: #16a34a; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+.badge-activo    { background: var(--app-success-soft); color: var(--app-success-text); padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
 .badge-inactivo  { background: var(--app-surface-muted); color: var(--app-text-muted); padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
 .badge-programada{ background: var(--app-surface-muted); color: var(--app-text-secondary); padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
-.badge-aprobado  { background: var(--app-success-soft); color: #16a34a; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
-.badge-pendiente { background: var(--app-warning-soft); color: #b45309; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
-.badge-rechazado { background: var(--app-danger-soft); color: #b91c1c; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
-.badge-procesado { background: var(--app-success-soft); color: #16a34a; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
-.badge-procesando{ background: var(--app-primary-muted); color: #1d4ed8; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
-.badge-error     { background: var(--app-danger-soft); color: #b91c1c; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
-.badge-exitoso   { background: var(--app-success-soft); color: #16a34a; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
-.badge-fallido   { background: var(--app-danger-soft); color: #b91c1c; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
-.badge-aprobada  { background: var(--app-success-soft); color: #16a34a; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; }
-.badge-revision  { background: var(--app-warning-soft); color: #b45309; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; }
-.badge-muestra   { background: var(--app-primary-muted); color: #1d4ed8; padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; }
-.badge-count     { background: var(--app-primary-muted); color: #1d4ed8; padding: 6px 14px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; }
-.badge-activo-reg{ background: var(--app-primary-muted); color: #1d4ed8; padding: 6px 14px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; }
-.badge-cand      { background: var(--app-primary-soft); color: #1d4ed8; padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+.badge-aprobado  { background: var(--app-success-soft); color: var(--app-success-text); padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+.badge-pendiente { background: var(--app-warning-soft); color: var(--app-warning-text); padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+.badge-rechazado { background: var(--app-danger-soft); color: var(--app-danger-text); padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+.badge-procesado { background: var(--app-success-soft); color: var(--app-success-text); padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+.badge-procesando{ background: var(--app-primary-muted); color: var(--app-info-text); padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+.badge-error     { background: var(--app-danger-soft); color: var(--app-danger-text); padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+.badge-exitoso   { background: var(--app-success-soft); color: var(--app-success-text); padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+.badge-fallido   { background: var(--app-danger-soft); color: var(--app-danger-text); padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+.badge-aprobada  { background: var(--app-success-soft); color: var(--app-success-text); padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; }
+.badge-revision  { background: var(--app-warning-soft); color: var(--app-warning-text); padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; }
+.badge-muestra   { background: var(--app-primary-muted); color: var(--app-info-text); padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; }
+.badge-count     { background: var(--app-primary-muted); color: var(--app-info-text); padding: 6px 14px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; }
+.badge-activo-reg{ background: var(--app-primary-muted); color: var(--app-info-text); padding: 6px 14px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; }
+.badge-cand      { background: var(--app-primary-soft); color: var(--app-info-text); padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
 
 .badge-nivel {
   padding: 3px 10px; border-radius: 20px; font-size: 0.6875rem; font-weight: 700;
-  &.nacional  { background: var(--app-primary-muted); color: #1d4ed8; }
-  &.regional  { background: var(--app-pink-soft); color: #7e22ce; }
+  &.nacional  { background: var(--app-primary-muted); color: var(--app-info-text); }
+  &.regional  { background: var(--app-pink-soft); color: var(--app-purple-text); }
 }
 
 .tag {
@@ -282,30 +282,30 @@
 
 .tag-partido {
   padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600;
-  &.liberal  { background: var(--app-danger-soft); color: #b91c1c; }
-  &.centro   { background: var(--app-primary-muted); color: #1d4ed8; }
-  &.pacto    { background: var(--app-success-soft); color: #15803d; }
-  &.cambio   { background: var(--app-warning-soft); color: #b45309; }
-  &.verde    { background: #d1fae5; color: #065f46; }
+  &.liberal  { background: var(--app-danger-soft); color: var(--app-danger-text); }
+  &.centro   { background: var(--app-primary-muted); color: var(--app-info-text); }
+  &.pacto    { background: var(--app-success-soft); color: var(--app-success-text); }
+  &.cambio   { background: var(--app-warning-soft); color: var(--app-warning-text); }
+  &.verde    { background: var(--app-success-soft); color: var(--app-success-text); }
 }
 
-.tag-presidencia { background: var(--app-primary-soft); color: #1d4ed8; padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
-.tag-senado      { background: var(--app-success-soft); color: #15803d; padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
-.tag-camara      { background: var(--app-warning-soft); color: #b45309; padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+.tag-presidencia { background: var(--app-primary-soft); color: var(--app-info-text); padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+.tag-senado      { background: var(--app-success-soft); color: var(--app-success-text); padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+.tag-camara      { background: var(--app-warning-soft); color: var(--app-warning-text); padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
 
 .badge-rol {
   padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 600;
-  &.rol-admin   { background: var(--app-pink-soft); color: #7e22ce; border: 1px solid #e9d5ff; }
-  &.rol-analista{ background: var(--app-primary-muted); color: #1d4ed8; }
+  &.rol-admin   { background: var(--app-pink-soft); color: var(--app-purple-text); border: 1px solid var(--app-purple-border); }
+  &.rol-analista{ background: var(--app-primary-muted); color: var(--app-info-text); }
   &.rol-operador{ background: var(--app-surface-muted); color: var(--app-text-secondary); }
 }
 
 .accion-badge {
   padding: 3px 10px; border-radius: 6px; font-size: 0.6875rem; font-weight: 700;
-  &.accion-create { background: var(--app-success-soft); color: #15803d; }
-  &.accion-update { background: var(--app-primary-muted); color: #1d4ed8; }
-  &.accion-delete { background: var(--app-danger-soft); color: #b91c1c; }
-  &.accion-login  { background: var(--app-pink-soft); color: #7e22ce; }
+  &.accion-create { background: var(--app-success-soft); color: var(--app-success-text); }
+  &.accion-update { background: var(--app-primary-muted); color: var(--app-info-text); }
+  &.accion-delete { background: var(--app-danger-soft); color: var(--app-danger-text); }
+  &.accion-login  { background: var(--app-pink-soft); color: var(--app-purple-text); }
 }
 
 // ─── PROGRESS ─────────────────────────────────────────────
@@ -318,7 +318,7 @@
 }
 
 .prog-fill, .prog-wrap .prog-fill {
-  height: 100%; background: #2563eb; border-radius: 99px;
+  height: 100%; background: var(--app-primary); border-radius: 99px;
 }
 
 .prog-wrap {
@@ -337,7 +337,7 @@
 .td-sigla { font-weight: 700; color: var(--app-text-secondary); }
 .td-color { display: flex; align-items: center; gap: 8px; font-size: 0.75rem; color: var(--app-text-muted); font-family: monospace; }
 .color-dot { width: 18px; height: 18px; border-radius: 4px; flex-shrink: 0; }
-.badge-activo-p { background: var(--app-success-soft); color: #16a34a; padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+.badge-activo-p { background: var(--app-success-soft); color: var(--app-success-text); padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
 
 // ─── ELECCIONES ───────────────────────────────────────────
 .config-grid {
@@ -348,7 +348,7 @@
   display: flex; flex-direction: column; align-items: center; gap: 10px;
   padding: 28px 16px; background: var(--app-surface-soft); border: 1px solid var(--app-border);
   border-radius: 14px; cursor: pointer; transition: .2s;
-  &:hover { background: var(--app-primary-soft); border-color: #bfdbfe; }
+  &:hover { background: var(--app-primary-soft); border-color: var(--app-info-border); }
 }
 
 .cfg-icon { font-size: 1.75rem; }
@@ -372,7 +372,7 @@
 .int-bar-track { height: 8px; background: var(--app-surface-muted); border-radius: 99px; overflow: hidden; }
 .int-bar-fill  {
   height: 100%; border-radius: 99px;
-  &.blue   { background: #2563eb; }
+  &.blue   { background: var(--app-primary); }
   &.red    { background: #ef4444; }
   &.green  { background: #22c55e; }
   &.orange { background: #f59e0b; }
@@ -410,7 +410,7 @@
   display: flex; flex-direction: column; align-items: center; gap: 10px;
   padding: 28px; background: var(--app-surface-soft); border: 1px solid var(--app-border);
   border-radius: 14px; cursor: pointer; transition: .2s; text-align: center;
-  &:hover { background: var(--app-primary-soft); border-color: #bfdbfe; }
+  &:hover { background: var(--app-primary-soft); border-color: var(--app-info-border); }
 }
 
 .carga-icon  { font-size: 1.75rem; }
@@ -465,7 +465,7 @@
 .rol-item {
   padding: 16px 20px; border-radius: 12px; border: 1px solid transparent;
   &.badge-full-bg { background: #faf5ff; border-color: #e9d5ff; }
-  &.badge-rw-bg   { background: var(--app-primary-soft); border-color: #bfdbfe; }
+  &.badge-rw-bg   { background: var(--app-primary-soft); border-color: var(--app-info-border); }
   &.badge-ro-bg   { background: var(--app-surface-soft); border-color: var(--app-border); }
 }
 
@@ -473,9 +473,9 @@
 .rol-nombre { font-size: 0.9375rem; font-weight: 700; }
 .rol-badge  {
   padding: 3px 10px; border-radius: 20px; font-size: 0.6875rem; font-weight: 700;
-  &.badge-full { background: #7c3aed; color: white; }
-  &.badge-rw   { background: #2563eb; color: white; }
-  &.badge-ro   { background: var(--app-text-secondary); color: white; }
+  &.badge-full { background: #7c3aed; color: var(--app-on-primary); }
+  &.badge-rw   { background: var(--app-primary); color: var(--app-on-primary); }
+  &.badge-ro   { background: var(--app-text-secondary); color: var(--app-on-primary); }
 }
 .rol-desc { font-size: 0.8125rem; color: var(--app-text-secondary); line-height: 1.5; }
 
@@ -542,7 +542,7 @@
   cursor: pointer;
   color: var(--app-text-secondary);
   transition: .2s;
-  &:hover { background: var(--app-danger-soft); color: #dc2626; }
+  &:hover { background: var(--app-danger-soft); color: var(--app-danger-text); }
 }
 
 .modal-body {
@@ -584,7 +584,7 @@
     outline: none;
     transition: .2s;
     background: var(--app-surface);
-    &:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.1); }
+    &:focus { border-color: var(--app-primary-text); box-shadow: 0 0 0 3px rgba(37,99,235,.1); }
     &::placeholder { color: var(--app-text-subtle); }
   }
 }

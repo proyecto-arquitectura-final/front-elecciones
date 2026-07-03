@@ -46,10 +46,13 @@ export class EncuestasAnalista implements OnInit {
   }
 
   get aprobadas(): number {
-    return this.encuestas.filter((poll) => this.esValida(poll)).length;
+    return this.encuestas.filter((poll) => poll.status === 'APROBADA').length;
   }
   get pendientes(): number {
-    return this.encuestas.length - this.aprobadas;
+    return this.encuestas.filter((poll) => poll.status === 'PENDIENTE').length;
+  }
+  get rechazadas(): number {
+    return this.encuestas.filter((poll) => poll.status === 'RECHAZADA').length;
   }
   get pctAprobadas(): number {
     return this.encuestas.length
@@ -65,8 +68,12 @@ export class EncuestasAnalista implements OnInit {
       : 0;
   }
 
+  get encuestaPublicada(): Poll | null {
+    return this.encuestas.find((poll) => poll.status === 'APROBADA') ?? null;
+  }
+
   get intencionVoto() {
-    return (this.encuestas[0]?.results || []).map((result, index) => ({
+    return (this.encuestaPublicada?.results || []).map((result, index) => ({
       nombre: result.candidate?.name || `Candidato ${index + 1}`,
       pct: result.percentage || 0,
       color: result.candidate?.party?.color || this.fallbackColor(index),
@@ -74,7 +81,7 @@ export class EncuestasAnalista implements OnInit {
   }
 
   get detallesMetod() {
-    const poll = this.encuestas[0];
+    const poll = this.encuestaPublicada;
     return poll
       ? [
           { label: 'Fuente', value: poll.source },
@@ -88,13 +95,13 @@ export class EncuestasAnalista implements OnInit {
   }
 
   estado(poll: Poll): string {
-    return this.esValida(poll) ? 'Aprobada' : 'En revisión';
+    return { APROBADA: 'Aprobada', PENDIENTE: 'En revisión', RECHAZADA: 'Rechazada' }[poll.status];
   }
 
   exportarCsv(): void {
     const header = ['id', 'source', 'date', 'sampleSize', 'marginError', 'methodology'];
     const rows = this.encuestas.map((poll) => [
-      poll.id || '',
+      poll.id,
       poll.source,
       poll.date,
       poll.sampleSize,
@@ -118,12 +125,6 @@ export class EncuestasAnalista implements OnInit {
     return palette[index % palette.length];
   }
 
-  private esValida(poll: Poll): boolean {
-    if (!this.encuestas.length) return false;
-    const averageSample = this.encuestas.reduce((sum, item) => sum + (item.sampleSize || 0), 0) / this.encuestas.length;
-    const averageMargin = this.encuestas.reduce((sum, item) => sum + (item.marginError || 0), 0) / this.encuestas.length;
-    return (poll.sampleSize || 0) >= averageSample && (poll.marginError || 0) <= averageMargin;
-  }
   private time(value?: string): number {
     return value ? new Date(`${value}T00:00:00`).getTime() : 0;
   }

@@ -1,140 +1,223 @@
-<div class="page-header">
-  <div>
-    <h1>Panel de Administración</h1>
-    <p>Gestión centralizada del sistema electoral</p>
-  </div>
-  <div class="header-actions">
-    <div class="system-info">
-      <span class="badge-system" [class.badge-warning]="!!error || !!advertencia">
-        <span class="status-dot"></span>
-        {{ error ? 'Sistema no disponible' : advertencia ? 'Carga parcial' : 'Sistema activo' }}
-      </span>
-      <span class="last-update" *ngIf="ultimaActualizacion">
-        Actualizado {{ ultimaActualizacion | date:'HH:mm:ss' }}
-      </span>
+<section class="dashboard" aria-labelledby="dashboard-title">
+  <header class="page-header">
+    <div>
+      <span class="eyebrow">Resumen administrativo</span>
+      <h1 id="dashboard-title">Panel de Administración</h1>
+      <p>Consulta el estado general y accede a las tareas principales del sistema electoral.</p>
     </div>
 
-    <button
-      type="button"
-      class="btn-refresh"
-      (click)="cargar()"
-      [disabled]="cargando"
-      [attr.aria-busy]="cargando"
-      [attr.title]="cargando ? 'Actualizando información' : 'Actualizar dashboard'">
-      <svg
-        class="refresh-icon"
-        [class.spinning]="cargando"
-        viewBox="0 0 24 24"
-        aria-hidden="true">
-        <path d="M20 11a8.1 8.1 0 0 0-15.5-2M4 4v5h5M4 13a8.1 8.1 0 0 0 15.5 2M20 20v-5h-5"></path>
-      </svg>
-      <span>{{ cargando ? 'Actualizando...' : 'Actualizar' }}</span>
-    </button>
-  </div>
-</div>
-
-<div class="feedback-row" *ngIf="error || advertencia || cargando">
-  <div *ngIf="cargando" class="loading-message" role="status" aria-live="polite">
-    <span class="loading-dot"></span>
-    Cargando información del sistema...
-  </div>
-  <div *ngIf="advertencia && !error" class="alert-warning">{{ advertencia }}</div>
-  <div *ngIf="error" class="alert-error">{{ error }}</div>
-</div>
-
-<!-- STATS -->
-<div class="stats-grid">
-  <div class="stat-card" *ngFor="let s of stats">
-    <div class="stat-top">
-      <div>
-        <div class="stat-label">{{ s.label }}</div>
-        <div class="stat-value">{{ s.value }}</div>
-        <div class="stat-sub">{{ s.sub }}</div>
+    <div class="header-actions">
+      <div class="system-info" aria-live="polite">
+        <span
+          class="badge-system"
+          [class.badge-warning]="!!advertencia"
+          [class.badge-error]="!!error">
+          <span class="status-dot" aria-hidden="true"></span>
+          {{ error ? 'Sistema no disponible' : advertencia ? 'Información desactualizada' : 'Sistema activo' }}
+        </span>
+        <span class="last-update" *ngIf="ultimaActualizacion">
+          Actualizado {{ ultimaActualizacion | date:'HH:mm:ss' }}
+        </span>
       </div>
-      <div class="stat-icon" [ngClass]="s.iconClass">{{ s.icon }}</div>
+
+      <button
+        type="button"
+        class="btn-refresh"
+        (click)="cargar()"
+        [disabled]="cargando"
+        [attr.aria-busy]="cargando"
+        [attr.title]="cargando ? 'Actualizando información' : 'Actualizar panel'">
+        <svg class="refresh-icon" [class.spinning]="cargando" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M20 11a8.1 8.1 0 0 0-15.5-2M4 4v5h5M4 13a8.1 8.1 0 0 0 15.5 2M20 20v-5h-5"></path>
+        </svg>
+        <span>{{ cargando ? 'Actualizando...' : 'Actualizar' }}</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="feedback-row" *ngIf="error || advertencia || (cargando && !tieneDatos)">
+    <div *ngIf="cargando && !tieneDatos" class="loading-message" role="status" aria-live="polite">
+      <span class="loading-dot" aria-hidden="true"></span>
+      Preparando el resumen administrativo...
+    </div>
+    <div *ngIf="advertencia && !error" class="alert-warning" role="status">{{ advertencia }}</div>
+    <div *ngIf="error" class="alert-error" role="alert">
+      <span>{{ error }}</span>
+      <button type="button" (click)="cargar()">Reintentar</button>
     </div>
   </div>
-</div>
 
-<!-- ELECCIONES EN CURSO + ACTIVIDAD RECIENTE -->
-<div class="two-col">
-
-  <div class="card">
-    <div class="card-header">
-      <h3>Elecciones en Curso</h3>
-      <button class="btn-primary" routerLink="/admin/elecciones">+ Nueva Elección</button>
+  <ng-container *ngIf="tieneDatos; else dashboardVacio">
+    <div class="stats-grid" aria-label="Indicadores principales">
+      <a class="stat-card" *ngFor="let stat of stats" [routerLink]="stat.route">
+        <div class="stat-copy">
+          <span class="stat-label">{{ stat.label }}</span>
+          <strong class="stat-value">{{ stat.value }}</strong>
+          <span class="stat-sub">{{ stat.sub }}</span>
+        </div>
+        <span class="stat-icon" [ngClass]="stat.iconClass" aria-hidden="true">{{ stat.icon }}</span>
+        <span class="stat-link">Ver detalle →</span>
+      </a>
     </div>
-    <table class="admin-table">
-      <thead>
-        <tr>
-          <th>Nombre</th><th>Tipo</th><th>Fecha</th><th>Progreso</th><th>Estado</th><th>Acciones</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let e of elecciones">
-          <td class="td-bold">{{ e.nombre }}</td>
-          <td><span class="tag">{{ e.tipo }}</span></td>
-          <td>{{ e.fecha }}</td>
-          <td>
-            <div class="prog-wrap">
-              <div class="prog-bar"><div class="prog-fill" [style.width]="e.progreso + '%'"></div></div>
-              <span>{{ e.progreso }}%</span>
+
+    <div class="dashboard-grid">
+      <article class="card elections-card">
+        <div class="card-header">
+          <div>
+            <h2>Elecciones en curso</h2>
+            <p>Progreso basado en el resumen electoral consolidado.</p>
+          </div>
+          <a
+            class="btn-primary"
+            routerLink="/admin/elecciones"
+            [queryParams]="{ action: 'new' }">
+            <span aria-hidden="true">+</span> Nueva elección
+          </a>
+        </div>
+
+        <div class="table-scroll" tabindex="0" aria-label="Elecciones activas">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Elección</th>
+                <th>Tipo</th>
+                <th>Fecha</th>
+                <th>Progreso</th>
+                <th>Estado</th>
+                <th><span class="sr-only">Acciones</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let election of elecciones; trackBy: trackById">
+                <td>
+                  <strong>{{ election.name }}</strong>
+                  <span class="table-secondary" *ngIf="election.summaryAvailable">
+                    {{ election.reportedTables | number }} de {{ election.totalTables | number }} mesas
+                  </span>
+                </td>
+                <td><span class="tag">{{ tipoEleccion(election.type) }}</span></td>
+                <td>{{ formatDate(election.date) }}</td>
+                <td>
+                  <div class="progress-cell" *ngIf="election.progress !== null; else sinResumen">
+                    <div
+                      class="progress-track"
+                      role="progressbar"
+                      [attr.aria-label]="'Progreso de ' + election.name"
+                      [attr.aria-valuenow]="election.progress"
+                      aria-valuemin="0"
+                      aria-valuemax="100">
+                      <span class="progress-fill" [style.width.%]="election.progress"></span>
+                    </div>
+                    <strong>{{ election.progress | number:'1.0-1' }}%</strong>
+                  </div>
+                  <ng-template #sinResumen>
+                    <span class="pending-summary">Sin resumen</span>
+                  </ng-template>
+                </td>
+                <td>
+                  <span class="state-badge" [ngClass]="estadoEleccionClass(election.state)">
+                    <span class="state-dot" aria-hidden="true"></span>
+                    {{ estadoEleccion(election.state) }}
+                  </span>
+                </td>
+                <td class="td-actions">
+                  <a class="icon-btn" routerLink="/admin/elecciones" title="Gestionar elecciones" aria-label="Gestionar elecciones">↗</a>
+                </td>
+              </tr>
+              <tr *ngIf="elecciones.length === 0">
+                <td colspan="6" class="empty-state">
+                  No hay elecciones abiertas o en conteo en este momento.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </article>
+
+      <article class="card activity-card">
+        <div class="card-header compact">
+          <div>
+            <h2>Actividad reciente</h2>
+            <p>Últimos cambios registrados por el sistema.</p>
+          </div>
+          <a routerLink="/admin/auditoria" class="text-link">Ver auditoría</a>
+        </div>
+
+        <div class="activity-list" *ngIf="actividad.length; else sinActividad">
+          <div class="activity-item" *ngFor="let item of actividad; trackBy: trackById">
+            <span class="activity-icon" [class.activity-error]="!item.success" aria-hidden="true">
+              {{ actividadIcon(item) }}
+            </span>
+            <div class="activity-content">
+              <div class="activity-heading">
+                <strong>{{ item.title }}</strong>
+                <time [attr.datetime]="item.at">{{ relativeTime(item.at) }}</time>
+              </div>
+              <p>{{ item.detail }}</p>
+              <span>Por {{ item.actor || 'Sistema' }}</span>
             </div>
-          </td>
-          <td><span class="badge-activa">▲ {{ e.estado }}</span></td>
-          <td class="td-actions">
-            <button class="icon-btn edit" routerLink="/admin/elecciones" title="Abrir elecciones">↗</button>
-          </td>
-        </tr>
-        <tr *ngIf="!cargando && elecciones.length === 0">
-          <td colspan="6" class="empty-state">No hay elecciones abiertas o en conteo.</td>
-        </tr>
-        <tr *ngIf="cargando && elecciones.length === 0">
-          <td colspan="6" class="empty-state loading-table">Consultando elecciones...</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
+          </div>
+        </div>
+        <ng-template #sinActividad>
+          <div class="empty-panel">
+            <span aria-hidden="true">🕘</span>
+            <p>No hay eventos de auditoría registrados.</p>
+          </div>
+        </ng-template>
+      </article>
+    </div>
 
-  <div class="card actividad-card">
-    <h3>Actividad Reciente</h3>
-    <div class="actividad-list" *ngIf="actividad.length; else sinActividad">
-      <div class="actividad-item" *ngFor="let a of actividad">
-        <div class="act-icon" [ngClass]="a.colorClass">{{ a.icon }}</div>
+    <article class="card system-card">
+      <div class="card-header compact">
         <div>
-          <div class="act-title">{{ a.titulo }}</div>
-          <div class="act-sub">{{ a.sub }}</div>
-          <div class="act-time">{{ a.tiempo }}</div>
+          <h2>Estado general del sistema</h2>
+          <p>Disponibilidad de los componentes y de la información electoral.</p>
+        </div>
+        <span class="auto-refresh">Actualización automática cada minuto</span>
+      </div>
+
+      <div class="status-grid">
+        <div
+          class="status-card"
+          *ngFor="let status of estadoSistema; trackBy: trackByCode"
+          [ngClass]="statusClass(status)">
+          <span class="status-icon" aria-hidden="true">{{ statusIcon(status) }}</span>
+          <div>
+            <h3>{{ statusTitle(status.code) }}</h3>
+            <strong>{{ status.status }}</strong>
+            <p>{{ status.detail }}</p>
+          </div>
         </div>
       </div>
-    </div>
-    <ng-template #sinActividad><p class="card-sub">No hay eventos de auditoría registrados.</p></ng-template>
-  </div>
+    </article>
 
-</div>
-
-<!-- ESTADO API -->
-<div class="card">
-  <h3>Estado de Integración con API Externa</h3>
-  <div class="api-grid">
-    <div class="api-card green" *ngFor="let api of apiEstado" [ngClass]="api.colorClass">
-      <div class="api-icon" [ngClass]="api.iconClass">✔</div>
-      <div>
-        <div class="api-title">{{ api.titulo }}</div>
-        <div class="api-status">{{ api.status }}</div>
-        <div class="api-sub">{{ api.sub }}</div>
+    <article class="card quick-actions-card">
+      <div class="card-header compact">
+        <div>
+          <h2>Acciones rápidas</h2>
+          <p>Atajos a las tareas administrativas más frecuentes.</p>
+        </div>
       </div>
-    </div>
-  </div>
-</div>
+      <div class="quick-actions-grid">
+        <a
+          class="quick-action"
+          *ngFor="let action of accionesRapidas"
+          [routerLink]="action.route"
+          [queryParams]="action.queryParams || null">
+          <span class="quick-icon" aria-hidden="true">{{ action.icon }}</span>
+          <span>
+            <strong>{{ action.label }}</strong>
+            <small>{{ action.description }}</small>
+          </span>
+          <span class="quick-arrow" aria-hidden="true">→</span>
+        </a>
+      </div>
+    </article>
+  </ng-container>
 
-<!-- ACCIONES RÁPIDAS -->
-<div class="card">
-  <h3>Acciones Rápidas</h3>
-  <div class="acciones-grid">
-    <button class="accion-btn" *ngFor="let a of accionesRapidas" [routerLink]="a.ruta">
-      <span class="accion-icon">{{ a.icon }}</span>
-      <span>{{ a.label }}</span>
-    </button>
-  </div>
-</div>
+  <ng-template #dashboardVacio>
+    <div class="initial-state" *ngIf="!cargando && !error">
+      No hay información disponible para construir el panel.
+    </div>
+  </ng-template>
+</section>

@@ -1,257 +1,508 @@
-<div class="page-header">
-  <div>
-    <h1>Gestión de Encuestas</h1>
-    <p>Administración de encuestas pre-electorales (FR-06)</p>
-  </div>
-
-  <div class="header-actions">
-    <label class="btn-outline file-button">
-      {{ importando ? 'Importando...' : '⬆ Importar CSV' }}
-      <input type="file" accept=".csv,text/csv" [disabled]="importando" (change)="importarCsv($event)" />
-    </label>
-    <button class="btn-primary" (click)="abrirModal()">+ Nueva Encuesta</button>
-  </div>
-</div>
-
-<div class="stats-grid">
-  <div class="stat-card">
-    <div class="stat-label">Total Encuestas</div>
-    <div class="stat-value">{{ encuestas.length }}</div>
-    <div class="stat-icon icon-blue">📈</div>
-  </div>
-
-  <div class="stat-card">
-    <div class="stat-label">Aprobadas</div>
-    <div class="stat-value green">{{ aprobadas }}</div>
-    <span class="badge-aprobada">{{ pctAprobadas }}%</span>
-  </div>
-
-  <div class="stat-card">
-    <div class="stat-label">Pendientes</div>
-    <div class="stat-value orange">{{ pendientes }}</div>
-    <span class="badge-revision">Revisión</span>
-  </div>
-
-  <div class="stat-card">
-    <div class="stat-label">Muestra Promedio</div>
-    <div class="stat-value">{{ muestraPromedio | number }}</div>
-    <div class="stat-icon icon-purple">📅</div>
-  </div>
-</div>
-
-<div class="card">
-  <div class="filters-row">
-    <div class="search-box">
-      <span>🔍</span>
-      <input
-        type="text"
-        placeholder="Buscar por fuente..."
-        [(ngModel)]="busqueda"
-      />
+<section class="poll-page" aria-labelledby="poll-page-title">
+  <header class="page-header">
+    <div>
+      <h1 id="poll-page-title">Gestión de Encuestas</h1>
+      <p>Administración de encuestas preelectorales y sus resultados (FR-06)</p>
     </div>
 
-    <button class="btn-outline" (click)="cargar()">🔄 Recargar</button>
+    <div class="header-actions" aria-label="Acciones de encuestas">
+      <button type="button" class="btn-outline" (click)="downloadCsvTemplate()">
+        <span aria-hidden="true">↓</span> Plantilla CSV
+      </button>
+
+      <label class="btn-outline file-button" [class.is-disabled]="importing">
+        <span aria-hidden="true">↑</span>
+        {{ importing ? 'Importando…' : 'Importar CSV' }}
+        <input
+          type="file"
+          accept=".csv,text/csv"
+          [disabled]="importing"
+          (change)="importCsv($event)"
+          aria-label="Importar encuestas desde un archivo CSV"
+        />
+      </label>
+
+      <button type="button" class="btn-primary" (click)="openModal()">
+        <span aria-hidden="true">＋</span> Nueva encuesta
+      </button>
+    </div>
+  </header>
+
+  <div class="page-feedback" aria-live="polite" aria-atomic="true">
+    <p *ngIf="error" class="alert-error" role="alert">{{ error }}</p>
+    <p *ngIf="message" class="alert-success">{{ message }}</p>
   </div>
 
-  <p *ngIf="error" class="alert-error">{{ error }}</p>
-  <p *ngIf="mensaje" class="alert-success">{{ mensaje }}</p>
+  <ng-container *ngIf="!loading; else initialLoading">
+    <div class="stats-grid" aria-label="Resumen de encuestas">
+      <article class="stat-card">
+        <div class="stat-top">
+          <div>
+            <div class="stat-label">Total de encuestas</div>
+            <div class="stat-value">{{ counters.total | number }}</div>
+            <div class="stat-sub">Según el filtro de elección</div>
+          </div>
+          <div class="stat-icon icon-blue" aria-hidden="true">▥</div>
+        </div>
+      </article>
 
-  <div class="table-title">Lista de Encuestas ({{ encuestasFiltradas.length }})</div>
+      <article class="stat-card">
+        <div class="stat-top">
+          <div>
+            <div class="stat-label">Aprobadas</div>
+            <div class="stat-value green">{{ counters.approved | number }}</div>
+            <div class="stat-sub">Disponibles para predicciones</div>
+          </div>
+          <span class="badge-aprobada">{{ approvedPercentage }}%</span>
+        </div>
+      </article>
 
-  <table class="admin-table">
-    <thead>
-      <tr>
-        <th>ID</th>
-        <th>Fuente</th>
-        <th>Fecha</th>
-        <th>Tamaño Muestra</th>
-        <th>Margen Error</th>
-        <th>Metodología</th>
-        <th>Resultados</th>
-        <th>Acciones</th>
-      </tr>
-    </thead>
+      <article class="stat-card">
+        <div class="stat-top">
+          <div>
+            <div class="stat-label">Pendientes</div>
+            <div class="stat-value orange">{{ counters.pending | number }}</div>
+            <div class="stat-sub">Rechazadas: {{ counters.rejected | number }}</div>
+          </div>
+          <span class="badge-revision">Revisión</span>
+        </div>
+      </article>
 
-    <tbody>
-      <tr *ngFor="let e of encuestasFiltradas">
-        <td class="td-id">#{{ e.id }}</td>
-        <td class="td-bold">{{ e.source }}</td>
-        <td>{{ e.date }}</td>
+      <article class="stat-card">
+        <div class="stat-top">
+          <div>
+            <div class="stat-label">Muestra promedio</div>
+            <div class="stat-value">{{ counters.averageSample | number:'1.0-0' }}</div>
+            <div class="stat-sub">Personas encuestadas</div>
+          </div>
+          <div class="stat-icon icon-purple" aria-hidden="true">∑</div>
+        </div>
+      </article>
+    </div>
 
-        <td>
-          <span class="badge-muestra">{{ e.sampleSize | number }}</span>
-        </td>
+    <section class="card poll-list-card" aria-labelledby="poll-list-title">
+      <div class="filters-row poll-filters">
+        <label class="search-box flex-search" for="poll-search">
+          <span aria-hidden="true">⌕</span>
+          <input
+            id="poll-search"
+            type="search"
+            placeholder="Buscar por fuente, metodología o elección"
+            [ngModel]="search"
+            (ngModelChange)="onSearchChange($event)"
+          />
+        </label>
 
-        <td>±{{ e.marginError }}%</td>
-        <td>{{ e.methodology }}</td>
+        <label class="filter-control">
+          <span>Elección</span>
+          <select [(ngModel)]="electionFilter" (ngModelChange)="onFilterChange()">
+            <option [ngValue]="null">Todas las elecciones</option>
+            <option *ngFor="let election of elections" [ngValue]="election.id">
+              {{ election.name }}
+            </option>
+          </select>
+        </label>
 
-        <td>
-          <span class="badge-aprobado">{{ e.results.length || 0 }}</span>
-        </td>
+        <label class="filter-control">
+          <span>Estado</span>
+          <select [(ngModel)]="statusFilter" (ngModelChange)="onFilterChange()">
+            <option [ngValue]="null">Todos los estados</option>
+            <option *ngFor="let option of statusOptions" [ngValue]="option.value">
+              {{ option.label }}
+            </option>
+          </select>
+        </label>
 
-        <td class="td-actions">
-          <button class="icon-btn edit" (click)="abrirModal(e)">✏</button>
-          <button class="icon-btn del" (click)="eliminar(e)">🗑</button>
-        </td>
-      </tr>
-    </tbody>
-  </table>
-</div>
+        <button type="button" class="btn-outline" (click)="clearFilters()">
+          Limpiar
+        </button>
+        <button
+          type="button"
+          class="btn-outline"
+          (click)="load(false)"
+          [disabled]="refreshing"
+          aria-label="Actualizar listado de encuestas"
+        >
+          <span class="refresh-icon" [class.spinning]="refreshing" aria-hidden="true">↻</span>
+          {{ refreshing ? 'Actualizando…' : 'Actualizar' }}
+        </button>
+      </div>
 
-<div class="two-col">
-  <div class="card">
-    <h3>Vista Detallada - Última Encuesta</h3>
-    <h4 class="sub-title">Intención de Voto</h4>
+      <div class="list-heading">
+        <div>
+          <h2 id="poll-list-title">Encuestas registradas</h2>
+          <p>
+            {{ totalElements | number }} registro(s)
+            <span *ngIf="generatedAt">· Actualizado {{ generatedAt | date:'short' }}</span>
+          </p>
+        </div>
+      </div>
 
-    <div class="intencion-list">
-      <div class="int-item" *ngFor="let c of intencionVoto">
-        <div class="int-header">
-          <span class="int-name">{{ c.nombre }}</span>
-          <span class="int-pct">{{ c.pct }}%</span>
+      <div class="table-wrapper" *ngIf="polls.length; else emptyState">
+        <table class="admin-table poll-table">
+          <caption class="sr-only">Listado paginado de encuestas electorales</caption>
+          <thead>
+            <tr>
+              <th scope="col">Fuente</th>
+              <th scope="col">Elección</th>
+              <th scope="col">Fecha</th>
+              <th scope="col">Muestra</th>
+              <th scope="col">Margen</th>
+              <th scope="col">Resultados</th>
+              <th scope="col">Estado</th>
+              <th scope="col" class="actions-heading">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              *ngFor="let poll of polls; trackBy: trackByPoll"
+              class="selectable-row"
+              [class.selected-row]="selectedPollId === poll.id"
+              tabindex="0"
+              (click)="selectPoll(poll)"
+              (keydown.enter)="selectPoll(poll)"
+            >
+              <td>
+                <div class="source-cell">
+                  <strong>{{ poll.source }}</strong>
+                  <span>#{{ poll.id }}</span>
+                </div>
+              </td>
+              <td>
+                <div class="election-cell">
+                  <span>{{ poll.election.name }}</span>
+                  <small>{{ poll.election.type }} · {{ poll.election.round }}</small>
+                </div>
+              </td>
+              <td>{{ poll.date | date:'yyyy-MM-dd':'UTC' }}</td>
+              <td><span class="badge-muestra">{{ poll.sampleSize | number }}</span></td>
+              <td>±{{ poll.marginError }}%</td>
+              <td>
+                <span class="result-count">{{ poll.results.length }}</span>
+                <small>{{ poll.totalPercentage }}%</small>
+              </td>
+              <td>
+                <span [class]="statusClass(poll.status)">{{ statusLabel(poll.status) }}</span>
+              </td>
+              <td class="td-actions" (click)="$event.stopPropagation()">
+                <button
+                  type="button"
+                  class="icon-btn edit"
+                  (click)="openModal(poll)"
+                  [attr.aria-label]="'Editar encuesta ' + poll.source"
+                  title="Editar encuesta"
+                >
+                  ✎
+                </button>
+                <button
+                  type="button"
+                  class="icon-btn del"
+                  (click)="deletePoll(poll)"
+                  [disabled]="deletingId === poll.id"
+                  [attr.aria-label]="'Eliminar encuesta ' + poll.source"
+                  title="Eliminar encuesta"
+                >
+                  {{ deletingId === poll.id ? '…' : '⌫' }}
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <ng-template #emptyState>
+        <div class="empty-state">
+          <div class="empty-icon" aria-hidden="true">▥</div>
+          <h3>No hay encuestas para mostrar</h3>
+          <p>Prueba otros filtros o registra una nueva encuesta.</p>
+          <button type="button" class="btn-primary" (click)="openModal()">Nueva encuesta</button>
+        </div>
+      </ng-template>
+
+      <footer class="pagination" *ngIf="totalElements > 0">
+        <label>
+          Filas por página
+          <select [(ngModel)]="pageSize" (ngModelChange)="changePageSize()">
+            <option [ngValue]="5">5</option>
+            <option [ngValue]="10">10</option>
+            <option [ngValue]="20">20</option>
+            <option [ngValue]="50">50</option>
+          </select>
+        </label>
+        <span>Página {{ page + 1 }} de {{ totalPages || 1 }}</span>
+        <div class="pagination-actions">
+          <button type="button" (click)="previousPage()" [disabled]="page === 0" aria-label="Página anterior">‹</button>
+          <button type="button" (click)="nextPage()" [disabled]="page + 1 >= totalPages" aria-label="Página siguiente">›</button>
+        </div>
+      </footer>
+    </section>
+
+    <div class="two-col detail-grid" *ngIf="selectedPoll as poll; else noSelection">
+      <section class="card" aria-labelledby="vote-detail-title">
+        <div class="detail-card-header">
+          <div>
+            <h3 id="vote-detail-title">Resultados de la encuesta seleccionada</h3>
+            <p>{{ poll.source }} · {{ poll.date | date:'mediumDate':'UTC' }}</p>
+          </div>
+          <span [class]="statusClass(poll.status)">{{ statusLabel(poll.status) }}</span>
         </div>
 
-        <div class="int-bar-track">
-          <div
-            class="int-bar-fill"
-            [style.background]="c.color"
-            [style.width]="c.pct + '%'"
-          ></div>
+        <div class="intencion-list" *ngIf="voteBars.length; else noResults">
+          <div class="int-item" *ngFor="let result of voteBars">
+            <div class="int-header">
+              <span class="int-name">{{ result.name }} <small>{{ result.party }}</small></span>
+              <strong class="int-pct">{{ result.percentage }}%</strong>
+            </div>
+            <div
+              class="int-bar-track"
+              role="progressbar"
+              [attr.aria-label]="result.name"
+              aria-valuemin="0"
+              aria-valuemax="100"
+              [attr.aria-valuenow]="result.percentage"
+            >
+              <div
+                class="int-bar-fill"
+                [style.background-color]="result.color"
+                [style.width.%]="result.percentage > 100 ? 100 : result.percentage"
+              ></div>
+            </div>
+          </div>
         </div>
+        <ng-template #noResults>
+          <div class="inline-empty">Esta encuesta no tiene resultados asociados.</div>
+        </ng-template>
+      </section>
+
+      <section class="card" aria-labelledby="method-detail-title">
+        <h3 id="method-detail-title">Detalles metodológicos</h3>
+        <dl class="detail-list">
+          <div *ngFor="let detail of details">
+            <dt>{{ detail.label }}</dt>
+            <dd>{{ detail.value }}</dd>
+          </div>
+        </dl>
+      </section>
+    </div>
+
+    <ng-template #noSelection>
+      <section class="card empty-detail">
+        <h3>Detalle de encuesta</h3>
+        <p>Selecciona una encuesta del listado para consultar sus resultados y metodología.</p>
+      </section>
+    </ng-template>
+
+    <section class="card validation-card" aria-labelledby="validation-title">
+      <h3 id="validation-title">Criterios de validación de encuestas (FR-06)</h3>
+      <div class="criterios-grid">
+        <article class="crit-card blue">
+          <div class="crit-title">Recencia</div>
+          <div class="crit-desc">La fecha debe ser real, no futura y anterior o igual a la elección asociada.</div>
+        </article>
+        <article class="crit-card green">
+          <div class="crit-title">Muestra y metodología</div>
+          <div class="crit-desc">La muestra debe ser positiva y la metodología debe quedar documentada.</div>
+        </article>
+        <article class="crit-card purple">
+          <div class="crit-title">Consistencia de resultados</div>
+          <div class="crit-desc">No se permiten candidatos repetidos ni porcentajes acumulados superiores a 100%.</div>
+        </article>
       </div>
+    </section>
+  </ng-container>
+
+  <ng-template #initialLoading>
+    <div class="loading-state" role="status" aria-live="polite">
+      <div class="loading-spinner" aria-hidden="true"></div>
+      <strong>Cargando encuestas…</strong>
+      <span>Consultando información registrada en el sistema.</span>
     </div>
-  </div>
+  </ng-template>
+</section>
 
-  <div class="card">
-    <h3>Detalles Metodológicos</h3>
-
-    <table class="detail-table">
-      <tr *ngFor="let d of detallesMetod">
-        <td class="dt-label">{{ d.label }}:</td>
-        <td class="dt-value">{{ d.value }}</td>
-      </tr>
-    </table>
-  </div>
-</div>
-
-<div class="card">
-  <h3>Criterios de Validación de Encuestas (FR-06)</h3>
-
-  <div class="criterios-grid">
-    <div class="crit-card blue">
-      <div class="crit-title">Recencia</div>
-      <div class="crit-desc">
-        Mayor peso a encuestas realizadas en fechas más cercanas a la elección
+<div
+  class="modal-overlay"
+  *ngIf="modalOpen"
+  (mousedown)="$event.target === $event.currentTarget && closeModal()"
+>
+  <section
+    class="modal poll-modal"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="poll-modal-title"
+  >
+    <header class="modal-header">
+      <div>
+        <h3 id="poll-modal-title">{{ editMode ? 'Editar encuesta' : 'Nueva encuesta' }}</h3>
+        <p>Los campos marcados con * son obligatorios.</p>
       </div>
-    </div>
-
-    <div class="crit-card green">
-      <div class="crit-title">Tamaño de Muestra</div>
-      <div class="crit-desc">
-        Muestras mayores tienen mayor ponderación
-      </div>
-    </div>
-
-    <div class="crit-card purple">
-      <div class="crit-title">Margen de Error</div>
-      <div class="crit-desc">
-        Menor margen = mayor confiabilidad
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="modal-overlay" *ngIf="modalAbierto" (click)="cerrarModal()">
-  <div class="modal" (click)="$event.stopPropagation()">
-    <div class="modal-header">
-      <h3>{{ modoEdicion ? 'Editar Encuesta' : 'Nueva Encuesta' }}</h3>
-      <button class="modal-close" (click)="cerrarModal()">✕</button>
-    </div>
+      <button type="button" class="modal-close" (click)="closeModal()" [disabled]="saving" aria-label="Cerrar modal">✕</button>
+    </header>
 
     <div class="modal-body">
-      <p *ngIf="error" style="color:#dc2626">{{ error }}</p>
+      <p *ngIf="modalError" class="alert-error" role="alert">{{ modalError }}</p>
 
-      <div class="form-group">
-        <label>Fuente / Firma Encuestadora <span class="req">*</span></label>
-        <input
-          type="text"
-          [(ngModel)]="form.fuente"
-          placeholder="Nombre de la fuente"
-        />
+      <div class="form-group full-row">
+        <label for="poll-election">Elección <span class="req">*</span></label>
+        <select
+          id="poll-election"
+          [(ngModel)]="form.electionId"
+          (ngModelChange)="onElectionChange()"
+          [disabled]="saving"
+        >
+          <option [ngValue]="null">Selecciona una elección</option>
+          <option
+            *ngFor="let election of elections"
+            [ngValue]="election.id"
+            [disabled]="election.state === 'ARCHIVADA'"
+          >
+            {{ election.name }}{{ election.state === 'ARCHIVADA' ? ' (archivada)' : '' }}
+          </option>
+        </select>
       </div>
 
       <div class="form-row">
         <div class="form-group">
-          <label>Fecha de Realización <span class="req">*</span></label>
-          <input type="date" [(ngModel)]="form.fecha" />
-        </div>
-
-        <div class="form-group">
-          <label>Tamaño de Muestra <span class="req">*</span></label>
+          <label for="poll-source">Fuente o firma encuestadora <span class="req">*</span></label>
           <input
-            type="number"
-            [(ngModel)]="form.muestra"
-            placeholder="Ej: 2500"
-            min="1"
+            #firstField
+            id="poll-source"
+            type="text"
+            [(ngModel)]="form.source"
+            maxlength="160"
+            autocomplete="organization"
+            [disabled]="saving"
           />
         </div>
-      </div>
-
-      <div class="form-row">
         <div class="form-group">
-          <label>Margen de Error (%)</label>
-          <input
-            type="number"
-            [(ngModel)]="form.margen"
-            placeholder="2"
-            min="0"
-            step="0.1"
-          />
-        </div>
-
-        <div class="form-group">
-          <label>Metodología</label>
-          <select [(ngModel)]="form.metodologia">
-            <option value="Telefónica">Telefónica</option>
-            <option value="Presencial">Presencial</option>
-            <option value="Digital">Digital</option>
-            <option value="Mixta">Mixta</option>
+          <label for="poll-status">Estado <span class="req">*</span></label>
+          <select id="poll-status" [(ngModel)]="form.status" [disabled]="saving">
+            <option *ngFor="let option of statusOptions" [ngValue]="option.value">{{ option.label }}</option>
           </select>
         </div>
       </div>
 
-      <div class="result-editor">
+      <div class="form-row three-columns">
+        <div class="form-group">
+          <label for="poll-date">Fecha de realización <span class="req">*</span></label>
+          <input id="poll-date" type="date" [(ngModel)]="form.date" [disabled]="saving" />
+        </div>
+        <div class="form-group">
+          <label for="poll-sample">Tamaño de muestra <span class="req">*</span></label>
+          <input
+            id="poll-sample"
+            type="number"
+            [(ngModel)]="form.sampleSize"
+            min="1"
+            max="10000000"
+            step="1"
+            inputmode="numeric"
+            [disabled]="saving"
+          />
+        </div>
+        <div class="form-group">
+          <label for="poll-margin">Margen de error (%) <span class="req">*</span></label>
+          <input
+            id="poll-margin"
+            type="number"
+            [(ngModel)]="form.marginError"
+            min="0.01"
+            max="20"
+            step="0.01"
+            inputmode="decimal"
+            [disabled]="saving"
+          />
+        </div>
+      </div>
+
+      <div class="form-group full-row">
+        <label for="poll-methodology">Metodología <span class="req">*</span></label>
+        <textarea
+          id="poll-methodology"
+          rows="3"
+          [(ngModel)]="form.methodology"
+          maxlength="500"
+          [disabled]="saving"
+          placeholder="Describe tipo de levantamiento, cobertura y método de muestreo"
+        ></textarea>
+        <small class="field-help">{{ form.methodology.length }}/500 caracteres</small>
+      </div>
+
+      <section class="result-editor" aria-labelledby="result-editor-title">
         <div class="result-editor-header">
           <div>
-            <strong>Resultados por candidato</strong>
-            <div class="form-help">Se conservan todos los resultados al editar la encuesta.</div>
+            <strong id="result-editor-title">Resultados por candidato</strong>
+            <div class="form-help">Solo aparecen candidatos de la elección seleccionada.</div>
           </div>
-          <button type="button" class="btn-outline" (click)="agregarResultado()">+ Agregar candidato</button>
+          <button type="button" class="btn-outline" (click)="addResult()" [disabled]="saving || !form.electionId">
+            ＋ Agregar
+          </button>
         </div>
 
-        <div class="form-row result-row" *ngFor="let result of form.resultados; let i = index">
-          <div class="form-group">
-            <label>Candidato {{ i + 1 }}</label>
-            <select [(ngModel)]="result.candidateId">
-              <option [ngValue]="null">Seleccionar candidato...</option>
-              <option *ngFor="let c of candidatos" [ngValue]="c.id">{{ c.name }}</option>
+        <div class="result-summary" [class.over-limit]="resultTotal > 100.01">
+          Total registrado: <strong>{{ resultTotal }}%</strong>
+        </div>
+
+        <div class="result-row" *ngFor="let result of form.results; let index = index">
+          <div class="form-group candidate-field">
+            <label [for]="'poll-candidate-' + index">Candidato {{ index + 1 }} <span class="req">*</span></label>
+            <select
+              [id]="'poll-candidate-' + index"
+              [(ngModel)]="result.candidateId"
+              [disabled]="saving || !form.electionId"
+            >
+              <option [ngValue]="null">Selecciona un candidato</option>
+              <option
+                *ngFor="let candidate of formCandidates; trackBy: trackByCandidate"
+                [ngValue]="candidate.id"
+                [disabled]="isCandidateDisabled(candidate.id, index)"
+              >
+                {{ candidate.name }} · {{ candidate.party?.acronym || candidate.party?.name || 'Sin partido' }}
+                {{ !candidate.active ? ' (inactivo)' : '' }}
+              </option>
             </select>
           </div>
 
           <div class="form-group percentage-field">
-            <label>Porcentaje</label>
-            <input type="number" [(ngModel)]="result.percentage" min="0" max="100" step="0.1" />
+            <label [for]="'poll-percentage-' + index">Porcentaje <span class="req">*</span></label>
+            <div class="percentage-input">
+              <input
+                [id]="'poll-percentage-' + index"
+                type="number"
+                [(ngModel)]="result.percentage"
+                min="0"
+                max="100"
+                step="0.01"
+                inputmode="decimal"
+                [disabled]="saving"
+              />
+              <span aria-hidden="true">%</span>
+            </div>
           </div>
 
-          <button type="button" class="icon-btn del remove-result" title="Quitar resultado" (click)="eliminarResultado(i)">🗑</button>
+          <button
+            type="button"
+            class="icon-btn del remove-result"
+            (click)="removeResult(index)"
+            [disabled]="saving"
+            [attr.aria-label]="'Quitar resultado ' + (index + 1)"
+            title="Quitar resultado"
+          >
+            ⌫
+          </button>
         </div>
-      </div>
+
+        <p class="inline-empty" *ngIf="form.electionId && formCandidates.length === 0">
+          La elección seleccionada no tiene candidatos activos disponibles.
+        </p>
+      </section>
     </div>
 
-    <div class="modal-footer">
-      <button class="btn-outline" (click)="cerrarModal()">Cancelar</button>
-      <button class="btn-primary" (click)="guardar()">
-        {{ modoEdicion ? 'Guardar Cambios' : 'Crear Encuesta' }}
+    <footer class="modal-footer">
+      <button type="button" class="btn-outline" (click)="closeModal()" [disabled]="saving">Cancelar</button>
+      <button type="button" class="btn-primary" (click)="save()" [disabled]="saving">
+        {{ saving ? 'Guardando…' : (editMode ? 'Guardar cambios' : 'Crear encuesta') }}
       </button>
-    </div>
-  </div>
+    </footer>
+  </section>
 </div>

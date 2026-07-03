@@ -1,5 +1,79 @@
-<div class="page-header"><div><h1>Generación de Reportes</h1><p>Exportar datos y análisis del sistema (FR-11)</p></div><span class="badge-count">📄 Backend conectado</span></div>
-<div class="stats-grid"><div class="stat-card" *ngFor="let s of stats"><div class="stat-top"><div><div class="stat-label">{{ s.label }}</div><div class="stat-value">{{ s.value }}</div><div class="stat-sub">{{ s.sub }}</div></div><div class="stat-icon" [ngClass]="s.iconClass">{{ s.icon }}</div></div></div></div>
-<div class="reportes-grid"><div class="reporte-card card" *ngFor="let r of reportes"><div class="rep-header"><div class="rep-icon" [ngClass]="r.iconClass">{{ r.icon }}</div><div><div class="rep-title">{{ r.titulo }}</div><div class="rep-sub">{{ r.descripcion }}</div></div></div><div class="rep-formats"><span class="fmt-badge">Formatos disponibles:</span><span class="fmt-tag" *ngFor="let f of r.formatos">{{ f }}</span></div><div class="rep-date">Último generado: {{ r.ultimoGenerado }}</div><div class="rep-actions"><button class="btn-primary" (click)="descargar('pdf')">⬇ Descargar PDF</button><button class="btn-outline" (click)="descargar('csv')">📄 Exportar CSV</button><button class="btn-outline" (click)="descargar('json')">JSON</button></div></div></div>
-<div class="card"><h3>Vista Previa - Reporte de Participación Electoral</h3><p class="rep-sub">Datos reales cargados desde /api/v1/resultados</p><h4 class="chart-subtitle">Votos por Región</h4><div class="preview-chart"><div class="chart-y"><span *ngFor="let value of chartAxis">{{ value | number }}</span></div><div class="chart-bars"><div class="chart-col" *ngFor="let r of regionData"><div class="chart-bar" [style.height]="(maxRegionVotes ? r.votos / maxRegionVotes * 240 : 0) + 'px'"></div><span class="chart-label">{{ r.region }}</span></div></div></div><table class="admin-table"><thead><tr><th>Región</th><th>Votos Totales</th><th>Participación</th><th>Mesas</th><th style="text-align:right">% Procesado</th></tr></thead><tbody><tr *ngFor="let r of regionData"><td class="td-bold">{{ r.region }}</td><td>{{ r.votos | number }}</td><td>{{ r.participacion }}%</td><td>{{ r.mesas | number }}</td><td style="text-align:right"><span class="badge-aprobado">{{ r.procesado }}%</span></td></tr></tbody></table></div>
-<div class="card"><h3>Opciones de Exportación Avanzada</h3><div class="export-grid"><div class="export-card" *ngFor="let e of exportOpciones"><div class="exp-icon" [ngClass]="e.iconClass">{{ e.icon }}</div><div class="exp-title">{{ e.titulo }}</div><div class="exp-sub">{{ e.sub }}</div><button class="btn-outline full" (click)="descargar(e.format)">⬇ {{ e.btnLabel }}</button></div></div></div>
+<header class="page-header">
+  <div><h1>Generación de Reportes</h1><p>Consolida y exporta resultados electorales validados.</p></div>
+  <div class="header-actions">
+    <label for="report-election">Elección</label>
+    <select id="report-election" [(ngModel)]="selectedElectionId" (change)="changeElection()" [disabled]="loading">
+      <option [ngValue]="null">Seleccionar elección</option>
+      <option *ngFor="let election of management?.elections" [ngValue]="election.id">{{ election.name }}</option>
+    </select>
+    <button class="btn-outline" type="button" (click)="load(true)" [disabled]="loading || refreshing">{{ refreshing ? 'Actualizando…' : '↻ Actualizar' }}</button>
+  </div>
+</header>
+
+<section class="stats-grid" aria-label="Resumen del reporte">
+  <article class="stat-card" *ngFor="let stat of stats">
+    <div><span>{{ stat.label }}</span><strong>{{ stat.value | number }}</strong><small>{{ stat.sub }}</small></div>
+    <i [ngClass]="stat.class" aria-hidden="true">{{ stat.icon }}</i>
+  </article>
+</section>
+
+<div class="alert error" *ngIf="error" role="alert"><span>{{ error }}</span><button type="button" (click)="load(false)">Reintentar</button></div>
+<div class="alert success" *ngIf="downloadMessage" role="status">{{ downloadMessage }}</div>
+
+<section class="card export-summary" aria-labelledby="report-title">
+  <div>
+    <h2 id="report-title">Reporte de resultados consolidados</h2>
+    <p>{{ management?.selectedElectionName || 'Selecciona una elección para consultar información.' }}</p>
+  </div>
+  <div class="format-actions">
+    <button type="button" class="btn-primary" (click)="download('PDF')" [disabled]="!selectedElectionId || !!downloading">{{ downloading === 'PDF' ? 'Generando…' : 'Descargar PDF' }}</button>
+    <button type="button" class="btn-outline" (click)="download('CSV')" [disabled]="!selectedElectionId || !!downloading">{{ downloading === 'CSV' ? 'Generando…' : 'Descargar CSV' }}</button>
+    <button type="button" class="btn-outline" (click)="download('JSON')" [disabled]="!selectedElectionId || !!downloading">{{ downloading === 'JSON' ? 'Generando…' : 'Descargar JSON' }}</button>
+  </div>
+  <div class="generation-grid" *ngIf="selectedElectionId">
+    <div><strong>Último PDF</strong><span>{{ lastGenerated('PDF') }}</span></div>
+    <div><strong>Último CSV</strong><span>{{ lastGenerated('CSV') }}</span></div>
+    <div><strong>Último JSON</strong><span>{{ lastGenerated('JSON') }}</span></div>
+  </div>
+</section>
+
+<section class="card" aria-labelledby="preview-title">
+  <div class="section-header"><div><h2 id="preview-title">Participación electoral por región</h2><p>Los valores se calculan en backend exclusivamente con resultados validados.</p></div></div>
+
+  <div class="loading-state" *ngIf="loading && !management">Cargando reporte…</div>
+  <div class="empty-state" *ngIf="!loading && management && regions.length === 0"><strong>No hay resultados validados para esta elección.</strong><span>Valida resultados oficiales antes de generar reportes.</span></div>
+
+  <div class="chart-scroll" *ngIf="regions.length > 0">
+    <div class="chart" role="img" [attr.aria-label]="'Gráfica de votos por región para ' + management?.selectedElectionName">
+      <div class="bar-column" *ngFor="let region of regions; trackBy: trackByRegion">
+        <span class="bar-value">{{ region.votes | number }}</span>
+        <div class="bar-track"><div class="bar" [style.height.%]="barHeight(region)"></div></div>
+        <span class="bar-label" [title]="region.region">{{ region.region }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-wrap" *ngIf="regions.length > 0">
+    <table class="admin-table">
+      <thead><tr><th>Región</th><th>Votos</th><th>Participación</th><th>Mesas</th><th>Procesado</th></tr></thead>
+      <tbody>
+        <tr *ngFor="let region of regions; trackBy: trackByRegion">
+          <td class="bold">{{ region.region }}</td>
+          <td>{{ region.votes | number }}</td>
+          <td>{{ region.participation | number: '1.1-1' }}%</td>
+          <td>{{ region.reportedTables | number }} / {{ region.totalTables | number }}</td>
+          <td><span class="progress-badge">{{ region.processedPercentage | number: '1.1-1' }}%</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="card formats-card" aria-labelledby="formats-title">
+  <h2 id="formats-title">Formatos disponibles</h2>
+  <div class="formats-grid">
+    <article><strong>PDF</strong><p>Documento legible con resumen regional y detalle por candidato.</p><button class="btn-outline" type="button" (click)="download('PDF')" [disabled]="!selectedElectionId || !!downloading">Generar PDF</button></article>
+    <article><strong>CSV</strong><p>Archivo tabular con codificación UTF-8 y campos correctamente escapados.</p><button class="btn-outline" type="button" (click)="download('CSV')" [disabled]="!selectedElectionId || !!downloading">Generar CSV</button></article>
+    <article><strong>JSON</strong><p>Estructura con metadatos, resumen regional y resultados validados.</p><button class="btn-outline" type="button" (click)="download('JSON')" [disabled]="!selectedElectionId || !!downloading">Generar JSON</button></article>
+  </div>
+</section>

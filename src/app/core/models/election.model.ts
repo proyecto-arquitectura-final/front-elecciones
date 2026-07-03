@@ -19,3 +19,34 @@ export interface Election {
   electionDate: string;
   state: ElectionState;
 }
+
+export interface ElectionManagementItem extends Election {
+  id: number;
+  reportedTables: number;
+  totalTables: number;
+  progress: number | null;
+  summaryAvailable: boolean;
+  candidateCount: number;
+  officialResultCount: number;
+  assistantSessionCount: number;
+  structureLocked: boolean;
+  deletable: boolean;
+  allowedStates: ElectionState[];
+}
+
+export interface ElectionManagementCounters {
+  total: number;
+  configured: number;
+  open: number;
+  counting: number;
+  closed: number;
+  archived: number;
+  withSummary: number;
+  withoutSummary: number;
+}
+
+export interface ElectionManagement {
+  counters: ElectionManagementCounters;
+  elections: ElectionManagementItem[];
+  generatedAt: string;
+}

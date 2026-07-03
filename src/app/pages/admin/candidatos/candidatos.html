@@ -1,4 +1,540 @@
-<div class="page-header"><div><h1>Gestión de Candidatos</h1><p>Administración de candidatos registrados (FR-04)</p></div><button class="btn-primary" (click)="abrirModal()">+ Nuevo Candidato</button></div>
-<div class="stats-grid"><div class="stat-card"><div class="stat-top"><div><div class="stat-label">Total Candidatos</div><div class="stat-value">{{ candidatos.length }}</div></div><div class="stat-icon icon-blue">👥</div></div></div><div class="stat-card"><div class="stat-top"><div><div class="stat-label">Presidencia</div><div class="stat-value">{{ totalPresidencia }}</div></div><span class="badge-nivel nacional">Nacional</span></div></div><div class="stat-card"><div class="stat-top"><div><div class="stat-label">Senado</div><div class="stat-value">{{ totalSenado }}</div></div><span class="badge-nivel nacional">Nacional</span></div></div><div class="stat-card"><div class="stat-top"><div><div class="stat-label">Cámara</div><div class="stat-value">{{ totalCamara }}</div></div><span class="badge-nivel regional">Regional</span></div></div></div>
-<div class="card"><div class="filters-row"><div class="search-box"><span>🔍</span><input type="text" placeholder="Buscar por nombre o partido..." [(ngModel)]="busqueda" /></div><select [(ngModel)]="filtroEleccion"><option value="">Todas las Elecciones</option><option>Presidencia</option><option>Senado</option><option>Cámara</option></select><button class="btn-outline" (click)="cargar()">🔄 Recargar</button></div><p *ngIf="error" style="color:#dc2626">{{ error }}</p><div class="table-title">Lista de Candidatos ({{ candidatosFiltrados.length }})</div><table class="admin-table"><thead><tr><th>ID</th><th>Nombre</th><th>Partido Político</th><th>Tipo de Elección</th><th>Territorio</th><th>Fórmula VP</th><th>Estado</th><th>Acciones</th></tr></thead><tbody><tr *ngFor="let c of candidatosFiltrados"><td class="td-id">#{{ c.id }}</td><td class="td-bold">{{ c.name }}</td><td><span class="tag-partido">{{ c.party?.name || 'Sin partido' }}</span></td><td><span class="tag" [ngClass]="tipoClass(c.electionType)">{{ toVistaTipo(c.electionType) }}</span></td><td class="td-territorio"><span>📍</span> {{ territorio(c) }}</td><td>{{ c.vicePresidentName || 'N/A' }}</td><td><span [ngClass]="c.active ? 'badge-activo' : 'badge-pendiente'">{{ c.active ? 'Activo' : 'Inactivo' }}</span></td><td class="td-actions"><button class="icon-btn edit" (click)="abrirModal(c)">✏</button><button class="icon-btn del" (click)="eliminar(c)">🗑</button></td></tr></tbody></table></div>
-<div class="modal-overlay" *ngIf="modalAbierto" (click)="cerrarModal()"><div class="modal" (click)="$event.stopPropagation()"><div class="modal-header"><h3>{{ modoEdicion ? 'Editar Candidato' : 'Nuevo Candidato' }}</h3><button class="modal-close" (click)="cerrarModal()">✕</button></div><div class="modal-body"><p *ngIf="error" style="color:#dc2626">{{ error }}</p><div class="form-row"><div class="form-group"><label>Nombre Completo <span class="req">*</span></label><input type="text" [(ngModel)]="form.nombre" placeholder="Nombre completo" /></div><div class="form-group"><label>Partido Político <span class="req">*</span></label><select [(ngModel)]="form.partidoId"><option value="">Seleccionar partido...</option><option *ngFor="let p of partidos" [value]="p.id">{{ p.name }} ({{ p.acronym }})</option></select></div></div><div class="form-row"><div class="form-group"><label>Tipo de Elección <span class="req">*</span></label><select [(ngModel)]="form.tipo"><option value="">Seleccionar...</option><option>Presidencia</option><option>Senado</option><option>Cámara</option></select></div><div class="form-group"><label>Departamento / Territorio</label><input type="text" [(ngModel)]="form.territorio" placeholder="Departamento o territorio" /></div></div><div class="form-row"><div class="form-group"><label>Municipio</label><input type="text" [(ngModel)]="form.municipio" placeholder="Opcional" /></div><div class="form-group"><label>Estado</label><select [(ngModel)]="form.active"><option [ngValue]="true">Activo</option><option [ngValue]="false">Inactivo</option></select></div></div><div class="form-group" *ngIf="form.tipo === 'Presidencia'"><label>Fórmula Vicepresidencial</label><input type="text" [(ngModel)]="form.vicepresidente" placeholder="Nombre del Vicepresidente" /></div></div><div class="modal-footer"><button class="btn-outline" (click)="cerrarModal()">Cancelar</button><button class="btn-primary" (click)="guardar()">{{ modoEdicion ? 'Guardar Cambios' : 'Crear Candidato' }}</button></div></div></div>
+<section class="candidate-page" aria-labelledby="candidate-page-title">
+  <header class="page-header">
+    <div>
+      <p class="eyebrow">Administración electoral</p>
+      <h1 id="candidate-page-title">Gestión de candidatos</h1>
+      <p>Registra y administra las candidaturas de cada elección.</p>
+    </div>
+    <button
+      type="button"
+      class="btn-primary"
+      (click)="openEditor()"
+      [disabled]="loading || !availableParties.length || !availableElections.length"
+    >
+      <span aria-hidden="true">＋</span>
+      Nuevo candidato
+    </button>
+  </header>
+
+  <div class="notice notice--error" *ngIf="error" role="alert">
+    <span aria-hidden="true">!</span>
+    <div>
+      <strong>No pudimos completar la operación</strong>
+      <p>{{ error }}</p>
+    </div>
+    <button type="button" aria-label="Cerrar mensaje" (click)="error = ''">×</button>
+  </div>
+
+  <div class="notice notice--success" *ngIf="success" role="status" aria-live="polite">
+    <span aria-hidden="true">✓</span>
+    <div>
+      <strong>Operación completada</strong>
+      <p>{{ success }}</p>
+    </div>
+    <button type="button" aria-label="Cerrar mensaje" (click)="success = ''">×</button>
+  </div>
+
+  <div class="stats-grid" aria-label="Resumen de candidatos">
+    <article class="stat-card">
+      <div class="stat-top">
+        <div>
+          <div class="stat-label">Total de candidatos</div>
+          <div class="stat-value">{{ management.counters.total }}</div>
+          <div class="stat-sub">Registrados en el sistema</div>
+        </div>
+        <div class="stat-icon icon-blue" aria-hidden="true">👥</div>
+      </div>
+    </article>
+
+    <article class="stat-card">
+      <div class="stat-top">
+        <div>
+          <div class="stat-label">Candidatos activos</div>
+          <div class="stat-value green">{{ management.counters.active }}</div>
+          <div class="stat-sub">{{ management.counters.inactive }} inactivos</div>
+        </div>
+        <div class="stat-icon icon-green" aria-hidden="true">✓</div>
+      </div>
+    </article>
+
+    <article class="stat-card">
+      <div class="stat-top">
+        <div>
+          <div class="stat-label">Presidencia</div>
+          <div class="stat-value">{{ management.counters.presidency }}</div>
+          <div class="stat-sub">
+            Senado {{ management.counters.senate }} · Cámara {{ management.counters.chamber }}
+          </div>
+        </div>
+        <div class="stat-icon icon-purple" aria-hidden="true">🗳️</div>
+      </div>
+    </article>
+
+    <article class="stat-card">
+      <div class="stat-top">
+        <div>
+          <div class="stat-label">Partidos representados</div>
+          <div class="stat-value">{{ management.counters.representedParties }}</div>
+          <div class="stat-sub">Con al menos una candidatura</div>
+        </div>
+        <div class="stat-icon icon-orange" aria-hidden="true">⚑</div>
+      </div>
+    </article>
+  </div>
+
+  <section class="card management-card" aria-labelledby="candidate-list-title">
+    <div class="toolbar">
+      <div class="search-box candidate-search">
+        <span aria-hidden="true">⌕</span>
+        <label class="sr-only" for="candidate-search">Buscar candidatos</label>
+        <input
+          id="candidate-search"
+          type="search"
+          placeholder="Buscar por candidato, partido o elección"
+          [(ngModel)]="search"
+          (ngModelChange)="filtersChanged()"
+        />
+      </div>
+
+      <label class="filter-control">
+        <span>Elección</span>
+        <select
+          [(ngModel)]="electionFilter"
+          (ngModelChange)="filtersChanged()"
+          aria-label="Filtrar por elección"
+        >
+          <option value="ALL">Todas las elecciones</option>
+          <option *ngFor="let election of elections" [value]="election.id">
+            {{ election.name }}
+          </option>
+        </select>
+      </label>
+
+      <label class="filter-control">
+        <span>Tipo</span>
+        <select
+          [(ngModel)]="typeFilter"
+          (ngModelChange)="filtersChanged()"
+          aria-label="Filtrar por tipo de elección"
+        >
+          <option value="ALL">Todos los tipos</option>
+          <option value="PRESIDENCIA">Presidencia</option>
+          <option value="SENADO">Senado</option>
+          <option value="CAMARA">Cámara</option>
+        </select>
+      </label>
+
+      <label class="filter-control">
+        <span>Estado</span>
+        <select
+          [(ngModel)]="statusFilter"
+          (ngModelChange)="filtersChanged()"
+          aria-label="Filtrar por estado"
+        >
+          <option value="ALL">Todos</option>
+          <option value="ACTIVE">Activos</option>
+          <option value="INACTIVE">Inactivos</option>
+        </select>
+      </label>
+
+      <button
+        type="button"
+        class="btn-outline refresh-button"
+        (click)="load(false)"
+        [disabled]="refreshing"
+      >
+        <span aria-hidden="true" [class.spin]="refreshing">↻</span>
+        {{ refreshing ? 'Actualizando' : 'Actualizar' }}
+      </button>
+    </div>
+
+    <div class="list-heading">
+      <div>
+        <h2 id="candidate-list-title">Candidatos registrados</h2>
+        <p>
+          {{ filteredCandidates.length }} de {{ management.counters.total }} registros
+        </p>
+      </div>
+      <button
+        type="button"
+        class="clear-filters"
+        (click)="clearFilters()"
+        *ngIf="search || electionFilter !== 'ALL' || typeFilter !== 'ALL' || statusFilter !== 'ALL'"
+      >
+        Limpiar filtros
+      </button>
+    </div>
+
+    <div class="loading-state" *ngIf="loading" role="status" aria-live="polite">
+      <div class="spinner" aria-hidden="true"></div>
+      <strong>Cargando candidatos</strong>
+      <span>Estamos consultando la información electoral.</span>
+    </div>
+
+    <div class="empty-state" *ngIf="!loading && !filteredCandidates.length">
+      <div class="empty-icon" aria-hidden="true">👤</div>
+      <h3>{{ candidates.length ? 'No hay coincidencias' : 'Aún no hay candidatos' }}</h3>
+      <p>
+        {{
+          candidates.length
+            ? 'Prueba con otros filtros o términos de búsqueda.'
+            : 'Registra la primera candidatura para comenzar.'
+        }}
+      </p>
+      <button type="button" class="btn-primary" (click)="openEditor()" *ngIf="!candidates.length">
+        Registrar candidato
+      </button>
+      <button type="button" class="btn-outline" (click)="clearFilters()" *ngIf="candidates.length">
+        Limpiar filtros
+      </button>
+    </div>
+
+    <div class="table-scroll desktop-list" *ngIf="!loading && filteredCandidates.length">
+      <table class="admin-table candidate-table">
+        <thead>
+          <tr>
+            <th>Candidato</th>
+            <th>Partido</th>
+            <th>Elección</th>
+            <th>Ámbito</th>
+            <th>Fórmula</th>
+            <th>Estado</th>
+            <th>Registros</th>
+            <th class="actions-column">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let candidate of pagedCandidates; trackBy: trackCandidate">
+            <td>
+              <div class="candidate-identity">
+                <span
+                  class="candidate-avatar"
+                  [style.--candidate-color]="candidate.party?.color || '#2563eb'"
+                  aria-hidden="true"
+                >
+                  {{ initials(candidate.name) }}
+                </span>
+                <div>
+                  <strong>{{ candidate.name }}</strong>
+                  <small>#{{ candidate.id }}</small>
+                </div>
+              </div>
+            </td>
+            <td>
+              <div class="party-cell">
+                <span
+                  class="party-color"
+                  [style.background]="candidate.party?.color || '#64748b'"
+                  aria-hidden="true"
+                ></span>
+                <div>
+                  <strong>{{ candidate.party?.name || 'Sin partido' }}</strong>
+                  <small>{{ candidate.party?.acronym }}</small>
+                </div>
+              </div>
+            </td>
+            <td>
+              <div class="election-cell">
+                <strong>{{ candidate.election?.name || 'Sin elección' }}</strong>
+                <span>
+                  {{ electionTypeLabel(candidate.electionType) }} ·
+                  {{ electionStateLabel(candidate.election?.state) }}
+                </span>
+              </div>
+            </td>
+            <td>
+              <span class="scope-badge" [class.scope-badge--regional]="candidate.electionType === 'CAMARA'">
+                {{ territory(candidate) }}
+              </span>
+            </td>
+            <td>
+              <span *ngIf="candidate.vicePresidentName; else noFormula">
+                {{ candidate.vicePresidentName }}
+              </span>
+              <ng-template #noFormula><span class="muted">No aplica</span></ng-template>
+            </td>
+            <td>
+              <span class="status-pill" [class.status-pill--inactive]="!candidate.active">
+                <span aria-hidden="true"></span>
+                {{ candidate.active ? 'Activo' : 'Inactivo' }}
+              </span>
+            </td>
+            <td>
+              <div class="dependency-cell">
+                <span title="Resultados oficiales asociados">
+                  {{ candidate.officialResultCount || 0 }} resultados
+                </span>
+                <span title="Mediciones en encuestas asociadas">
+                  {{ candidate.pollResultCount || 0 }} encuestas
+                </span>
+              </div>
+            </td>
+            <td class="td-actions actions-column">
+              <button
+                type="button"
+                class="icon-btn edit"
+                (click)="openEditor(candidate)"
+                [attr.aria-label]="'Editar a ' + candidate.name"
+                title="Editar candidato"
+              >
+                ✎
+              </button>
+              <button
+                type="button"
+                class="icon-btn del"
+                [class.icon-btn--disabled]="!candidate.deletable"
+                (click)="requestDelete(candidate)"
+                [attr.aria-label]="'Eliminar a ' + candidate.name"
+                [title]="candidate.deletable ? 'Eliminar candidato' : 'Tiene información asociada; desactívalo en su lugar'"
+              >
+                🗑
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="candidate-cards" *ngIf="!loading && filteredCandidates.length">
+      <article class="candidate-card" *ngFor="let candidate of pagedCandidates; trackBy: trackCandidate">
+        <div class="candidate-card__header">
+          <div class="candidate-identity">
+            <span
+              class="candidate-avatar"
+              [style.--candidate-color]="candidate.party?.color || '#2563eb'"
+              aria-hidden="true"
+            >
+              {{ initials(candidate.name) }}
+            </span>
+            <div>
+              <h3>{{ candidate.name }}</h3>
+              <p>{{ candidate.party?.name }} · {{ candidate.party?.acronym }}</p>
+            </div>
+          </div>
+          <span class="status-pill" [class.status-pill--inactive]="!candidate.active">
+            <span aria-hidden="true"></span>
+            {{ candidate.active ? 'Activo' : 'Inactivo' }}
+          </span>
+        </div>
+
+        <dl>
+          <div>
+            <dt>Elección</dt>
+            <dd>{{ candidate.election?.name }}</dd>
+          </div>
+          <div>
+            <dt>Ámbito</dt>
+            <dd>{{ territory(candidate) }}</dd>
+          </div>
+          <div>
+            <dt>Fórmula</dt>
+            <dd>{{ candidate.vicePresidentName || 'No aplica' }}</dd>
+          </div>
+          <div>
+            <dt>Información asociada</dt>
+            <dd>
+              {{ candidate.officialResultCount || 0 }} resultados ·
+              {{ candidate.pollResultCount || 0 }} encuestas
+            </dd>
+          </div>
+        </dl>
+
+        <div class="candidate-card__actions">
+          <button type="button" class="btn-outline" (click)="openEditor(candidate)">Editar</button>
+          <button
+            type="button"
+            class="btn-danger-outline"
+            (click)="requestDelete(candidate)"
+            [disabled]="!candidate.deletable"
+          >
+            Eliminar
+          </button>
+        </div>
+      </article>
+    </div>
+
+    <footer class="pagination" *ngIf="!loading && filteredCandidates.length">
+      <div>
+        Mostrando {{ visibleFrom }}–{{ visibleTo }} de {{ filteredCandidates.length }}
+      </div>
+      <label>
+        <span>Filas</span>
+        <select [(ngModel)]="pageSize" (ngModelChange)="filtersChanged()">
+          <option [ngValue]="10">10</option>
+          <option [ngValue]="25">25</option>
+          <option [ngValue]="50">50</option>
+        </select>
+      </label>
+      <div class="pagination-actions">
+        <button type="button" (click)="previousPage()" [disabled]="page === 1" aria-label="Página anterior">‹</button>
+        <span>Página {{ page }} de {{ totalPages }}</span>
+        <button type="button" (click)="nextPage()" [disabled]="page === totalPages" aria-label="Página siguiente">›</button>
+      </div>
+    </footer>
+  </section>
+</section>
+
+<div class="modal-overlay" *ngIf="editorOpen" (click)="closeEditor()">
+  <section
+    class="modal candidate-modal"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="candidate-editor-title"
+    (click)="$event.stopPropagation()"
+  >
+    <header class="modal-header">
+      <div>
+        <p class="modal-eyebrow">{{ editMode ? 'Actualizar registro' : 'Nueva candidatura' }}</p>
+        <h2 id="candidate-editor-title">{{ editMode ? 'Editar candidato' : 'Registrar candidato' }}</h2>
+      </div>
+      <button type="button" class="modal-close" (click)="closeEditor()" aria-label="Cerrar">×</button>
+    </header>
+
+    <div class="modal-body">
+      <div class="form-intro">
+        La elección define el tipo de candidatura y los campos territoriales necesarios.
+      </div>
+
+      <div class="form-group">
+        <label for="candidate-name">Nombre completo <span class="req">*</span></label>
+        <input
+          id="candidate-name"
+          type="text"
+          maxlength="160"
+          autocomplete="off"
+          [(ngModel)]="form.name"
+          [class.input-error]="fieldErrors.name"
+          placeholder="Ej. María Fernández"
+        />
+        <small class="field-error" *ngIf="fieldErrors.name">{{ fieldErrors.name }}</small>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="candidate-election">Elección <span class="req">*</span></label>
+          <select
+            id="candidate-election"
+            [(ngModel)]="form.electionId"
+            (ngModelChange)="electionChanged()"
+            [class.input-error]="fieldErrors.electionId"
+          >
+            <option [ngValue]="null">Selecciona una elección</option>
+            <option *ngFor="let election of availableElections" [ngValue]="election.id">
+              {{ election.name }} · {{ electionTypeLabel(election.type) }}
+            </option>
+          </select>
+          <small class="field-error" *ngIf="fieldErrors.electionId">{{ fieldErrors.electionId }}</small>
+        </div>
+
+        <div class="form-group">
+          <label for="candidate-party">Partido político <span class="req">*</span></label>
+          <select
+            id="candidate-party"
+            [(ngModel)]="form.partyId"
+            [class.input-error]="fieldErrors.partyId"
+          >
+            <option [ngValue]="null">Selecciona un partido</option>
+            <option *ngFor="let party of availableParties" [ngValue]="party.id">
+              {{ party.name }} ({{ party.acronym }}){{ party.active ? '' : ' · Inactivo' }}
+            </option>
+          </select>
+          <small class="field-error" *ngIf="fieldErrors.partyId">{{ fieldErrors.partyId }}</small>
+        </div>
+      </div>
+
+      <div class="election-preview" *ngIf="selectedElection">
+        <div>
+          <span>Tipo de candidatura</span>
+          <strong>{{ electionTypeLabel(selectedElection.type) }}</strong>
+        </div>
+        <div>
+          <span>Estado de la elección</span>
+          <strong>{{ electionStateLabel(selectedElection.state) }}</strong>
+        </div>
+        <div>
+          <span>Fecha</span>
+          <strong>{{ selectedElection.date ? (selectedElection.date | date: 'd MMM y') : 'Sin fecha' }}</strong>
+        </div>
+      </div>
+
+      <div class="form-group" *ngIf="selectedElection?.type === 'PRESIDENCIA'">
+        <label for="candidate-vp">Fórmula vicepresidencial <span class="req">*</span></label>
+        <input
+          id="candidate-vp"
+          type="text"
+          maxlength="160"
+          [(ngModel)]="form.vicePresidentName"
+          [class.input-error]="fieldErrors.vicePresidentName"
+          placeholder="Nombre completo"
+        />
+        <small class="field-error" *ngIf="fieldErrors.vicePresidentName">
+          {{ fieldErrors.vicePresidentName }}
+        </small>
+      </div>
+
+      <div class="form-row" *ngIf="selectedElection?.type === 'CAMARA'">
+        <div class="form-group">
+          <label for="candidate-department">Departamento o circunscripción <span class="req">*</span></label>
+          <input
+            id="candidate-department"
+            type="text"
+            maxlength="120"
+            [(ngModel)]="form.department"
+            [class.input-error]="fieldErrors.department"
+            placeholder="Ej. Antioquia"
+          />
+          <small class="field-error" *ngIf="fieldErrors.department">{{ fieldErrors.department }}</small>
+        </div>
+        <div class="form-group">
+          <label for="candidate-municipality">Municipio <span class="optional">Opcional</span></label>
+          <input
+            id="candidate-municipality"
+            type="text"
+            maxlength="120"
+            [(ngModel)]="form.municipality"
+            placeholder="Ej. Medellín"
+          />
+        </div>
+      </div>
+
+      <label class="status-switch">
+        <input type="checkbox" [(ngModel)]="form.active" />
+        <span class="status-switch__control" aria-hidden="true"></span>
+        <span>
+          <strong>Candidato activo</strong>
+          <small>Los candidatos inactivos se conservan en el historial, pero no participan en cálculos nuevos.</small>
+        </span>
+      </label>
+    </div>
+
+    <footer class="modal-footer">
+      <button type="button" class="btn-outline" (click)="closeEditor()" [disabled]="saving">Cancelar</button>
+      <button type="button" class="btn-primary" (click)="save()" [disabled]="saving">
+        {{ saving ? 'Guardando…' : editMode ? 'Guardar cambios' : 'Registrar candidato' }}
+      </button>
+    </footer>
+  </section>
+</div>
+
+<div class="modal-overlay" *ngIf="deleteOpen" (click)="closeDelete()">
+  <section
+    class="modal confirm-modal"
+    role="alertdialog"
+    aria-modal="true"
+    aria-labelledby="delete-candidate-title"
+    (click)="$event.stopPropagation()"
+  >
+    <div class="confirm-icon" aria-hidden="true">!</div>
+    <h2 id="delete-candidate-title">Eliminar candidato</h2>
+    <p>
+      ¿Confirmas que deseas eliminar a <strong>{{ candidateToDelete?.name }}</strong>?
+      Esta acción no se puede deshacer.
+    </p>
+    <div class="confirm-actions">
+      <button type="button" class="btn-outline" (click)="closeDelete()" [disabled]="deleting">Cancelar</button>
+      <button type="button" class="btn-danger" (click)="confirmDelete()" [disabled]="deleting">
+        {{ deleting ? 'Eliminando…' : 'Eliminar' }}
+      </button>
+    </div>
+  </section>
+</div>

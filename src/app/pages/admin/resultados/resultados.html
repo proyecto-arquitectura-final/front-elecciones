@@ -1,5 +1,583 @@
-<div class="page-header"><div><h1>Gestión de Resultados</h1><p>Cargar, validar y procesar resultados electorales</p></div><div class="header-actions"><button class="btn-outline" [disabled]="sincronizando" (click)="sincronizar()">{{ sincronizando ? 'Sincronizando...' : '🔄 Sincronizar' }}</button><button class="btn-primary" (click)="abrirModal()">⬆ Cargar Resultados</button></div></div>
-<div class="stats-grid"><div class="stat-card"><div class="stat-top"><div><div class="stat-label">Mesas Procesadas</div><div class="stat-value">{{ mesasReportadas | number }}</div><div class="progress-bar"><div class="prog-fill fill-green" [style.width]="pctMesas + '%'"></div></div><div class="stat-sub">{{ pctMesas }}% del total</div></div><div class="stat-icon icon-green">✔</div></div></div><div class="stat-card"><div class="stat-top"><div><div class="stat-label">Registros</div><div class="stat-value">{{ resultados.length }}</div><div class="stat-sub">Resultados persistidos</div></div><div class="stat-icon icon-blue">⏱</div></div></div><div class="stat-card"><div class="stat-top"><div><div class="stat-label">Votos Totales</div><div class="stat-value">{{ votosTotales | number }}</div><div class="stat-sub">Suma oficial cargada</div></div><div class="stat-icon icon-purple">🗳</div></div></div><div class="stat-card"><div class="stat-top"><div><div class="stat-label">Trazabilidad</div><div class="stat-value">OK</div><div class="stat-sub">Timestamp y origen</div></div><div class="stat-icon icon-orange">⏳</div></div></div></div>
-<p *ngIf="mensaje" class="alert-success">{{ mensaje }}</p><div class="card"><div class="card-header"><h3>Resultados Oficiales</h3><button class="btn-outline" (click)="cargar()">🔄 Recargar</button></div><p *ngIf="error" style="color:#dc2626">{{ error }}</p><table class="admin-table"><thead><tr><th>ID</th><th>Elección</th><th>Candidato</th><th>Departamento</th><th>Municipio</th><th>Votos</th><th>Mesas</th><th>Participación</th><th>Validación</th></tr></thead><tbody><tr *ngFor="let r of resultados"><td class="td-bold">#{{ r.id }}</td><td>{{ r.election?.name || '-' }}</td><td>{{ r.candidate?.name || '-' }}</td><td>{{ r.department }}</td><td>{{ r.municipality }}</td><td>{{ r.votes | number }}</td><td>{{ r.reportedTables }}/{{ r.totalTables }}</td><td>{{ r.participation }}%</td><td><span [ngClass]="getValidClass()">✔ Aprobado</span></td></tr></tbody></table></div>
-<div class="card"><h3>Opciones de Carga Masiva</h3><div class="carga-grid"><div class="carga-card" *ngFor="let c of cargaOpciones"><div class="carga-icon" [ngClass]="c.iconClass">{{ c.icon }}</div><div class="carga-title">{{ c.titulo }}</div><div class="carga-sub">{{ c.sub }}</div></div></div></div>
-<div class="modal-overlay" *ngIf="modalAbierto" (click)="cerrarModal()"><div class="modal" (click)="$event.stopPropagation()"><div class="modal-header"><h3>Nuevo Resultado Oficial</h3><button class="modal-close" (click)="cerrarModal()">✕</button></div><div class="modal-body"><p *ngIf="error" style="color:#dc2626">{{ error }}</p><div class="form-row"><div class="form-group"><label>Elección</label><select [(ngModel)]="form.electionId"><option value="">Seleccionar...</option><option *ngFor="let e of elecciones" [value]="e.id">{{ e.name }}</option></select></div><div class="form-group"><label>Candidato</label><select [(ngModel)]="form.candidateId"><option value="">Seleccionar...</option><option *ngFor="let c of candidatos" [value]="c.id">{{ c.name }}</option></select></div></div><div class="form-row"><div class="form-group"><label>Departamento</label><input [(ngModel)]="form.department" /></div><div class="form-group"><label>Municipio</label><input [(ngModel)]="form.municipality" /></div></div><div class="form-row"><div class="form-group"><label>Votos</label><input type="number" [(ngModel)]="form.votes" /></div><div class="form-group"><label>Porcentaje</label><input type="number" [(ngModel)]="form.percentage" /></div></div><div class="form-row"><div class="form-group"><label>Mesas reportadas</label><input type="number" [(ngModel)]="form.reportedTables" /></div><div class="form-group"><label>Total mesas</label><input type="number" [(ngModel)]="form.totalTables" /></div></div><div class="form-group"><label>Participación (%)</label><input type="number" [(ngModel)]="form.participation" /></div></div><div class="modal-footer"><button class="btn-outline" (click)="cerrarModal()">Cancelar</button><button class="btn-primary" (click)="guardar()">Guardar Resultado</button></div></div></div>
+<div class="results-page">
+  <header class="page-header">
+    <div>
+      <h1>Gestión de Resultados</h1>
+      <p>Carga, valida y consolida resultados oficiales por elección y territorio.</p>
+    </div>
+
+    <div class="header-actions" aria-label="Acciones de resultados">
+      <button type="button" class="btn-outline" (click)="downloadCsvTemplate()">
+        <span aria-hidden="true">↓</span> Plantilla CSV
+      </button>
+
+      <label class="btn-outline file-button" [class.is-disabled]="importing || !canManageSelectedElection">
+        <span aria-hidden="true">↑</span>
+        {{ importing ? 'Importando…' : 'Importar CSV' }}
+        <input
+          type="file"
+          accept=".csv,text/csv"
+          [disabled]="importing || !canManageSelectedElection"
+          (change)="importCsv($event)"
+          aria-label="Importar resultados oficiales desde un archivo CSV"
+        />
+      </label>
+
+      <button
+        type="button"
+        class="btn-outline"
+        [disabled]="!canManageSelectedElection || validating"
+        (click)="validateResults()"
+      >
+        <span class="refresh-icon" [class.spinning]="validating" aria-hidden="true">↻</span>
+        {{ validating ? 'Validando…' : 'Validar datos' }}
+      </button>
+
+      <button type="button" class="btn-primary" [disabled]="!canManageSelectedElection" (click)="openModal()">
+        <span aria-hidden="true">＋</span> Nuevo resultado
+      </button>
+    </div>
+  </header>
+
+  <div class="page-feedback" aria-live="polite" aria-atomic="true">
+    <p *ngIf="error" class="alert-error" role="alert">{{ error }}</p>
+    <p *ngIf="message" class="alert-success">{{ message }}</p>
+  </div>
+
+  <ng-container *ngIf="!loading; else initialLoading">
+    <section class="stats-grid" aria-label="Resumen de resultados">
+      <article class="stat-card">
+        <div class="stat-top">
+          <div>
+            <div class="stat-label">Mesas procesadas</div>
+            <div class="stat-value">{{ counters.reportedTables | number }}</div>
+            <div
+              class="progress-bar"
+              role="progressbar"
+              aria-label="Porcentaje de mesas procesadas"
+              aria-valuemin="0"
+              aria-valuemax="100"
+              [attr.aria-valuenow]="counters.tablePercentage"
+            >
+              <div class="prog-fill fill-green" [style.width.%]="counters.tablePercentage"></div>
+            </div>
+            <div class="stat-sub">
+              {{ counters.tablePercentage | number:'1.0-2' }}% de
+              {{ counters.totalTables | number }} mesas
+            </div>
+          </div>
+          <div class="stat-icon icon-green" aria-hidden="true">✓</div>
+        </div>
+      </article>
+
+      <article class="stat-card">
+        <div class="stat-top">
+          <div>
+            <div class="stat-label">Registros oficiales</div>
+            <div class="stat-value">{{ counters.records | number }}</div>
+            <div class="stat-sub">
+              {{ counters.validated | number }} validados · {{ counters.rejected | number }} rechazados
+            </div>
+          </div>
+          <div class="stat-icon icon-blue" aria-hidden="true">▤</div>
+        </div>
+      </article>
+
+      <article class="stat-card">
+        <div class="stat-top">
+          <div>
+            <div class="stat-label">Votos validados por candidatos</div>
+            <div class="stat-value">{{ counters.candidateVotes | number }}</div>
+            <div class="stat-sub">Participación: {{ counters.participation | number:'1.0-2' }}%</div>
+          </div>
+          <div class="stat-icon icon-purple" aria-hidden="true">●</div>
+        </div>
+      </article>
+
+      <article class="stat-card">
+        <div class="stat-top">
+          <div>
+            <div class="stat-label">Trazabilidad</div>
+            <div class="stat-value traceability-value" [ngClass]="traceabilityClass()">
+              {{ traceabilityLabel() }}
+            </div>
+            <div class="stat-sub">
+              <ng-container *ngIf="counters.lastImportedAt; else noTraceDate">
+                Última carga {{ counters.lastImportedAt | date:'short' }}
+              </ng-container>
+              <ng-template #noTraceDate>Sin cargas registradas</ng-template>
+            </div>
+          </div>
+          <div class="stat-icon icon-orange" aria-hidden="true">⌁</div>
+        </div>
+      </article>
+    </section>
+
+    <section class="card results-list-card" aria-labelledby="results-list-title">
+      <div class="filters-row result-filters">
+        <label class="search-box flex-search" for="result-search">
+          <span aria-hidden="true">⌕</span>
+          <input
+            id="result-search"
+            type="search"
+            placeholder="Buscar candidato, partido, territorio u origen"
+            [ngModel]="search"
+            (ngModelChange)="onSearchChange($event)"
+          />
+        </label>
+
+        <label class="filter-control">
+          <span>Elección</span>
+          <select [(ngModel)]="electionFilter" (ngModelChange)="onElectionChange()">
+            <option *ngFor="let election of elections" [ngValue]="election.id">
+              {{ election.name }}
+            </option>
+          </select>
+        </label>
+
+        <label class="filter-control">
+          <span>Estado</span>
+          <select [(ngModel)]="statusFilter" (ngModelChange)="onFilterChange()">
+            <option [ngValue]="null">Todos</option>
+            <option *ngFor="let option of statusOptions" [ngValue]="option.value">
+              {{ option.label }}
+            </option>
+          </select>
+        </label>
+
+        <label class="filter-control">
+          <span>Departamento</span>
+          <select [(ngModel)]="departmentFilter" (ngModelChange)="onDepartmentChange()">
+            <option value="">Todos</option>
+            <option *ngFor="let department of departments" [value]="department">
+              {{ department }}
+            </option>
+          </select>
+        </label>
+
+        <label class="filter-control">
+          <span>Municipio</span>
+          <select [(ngModel)]="municipalityFilter" (ngModelChange)="onFilterChange()">
+            <option value="">Todos</option>
+            <option *ngFor="let municipality of municipalities" [value]="municipality">
+              {{ municipality }}
+            </option>
+          </select>
+        </label>
+
+        <button type="button" class="btn-outline" (click)="clearFilters()">Limpiar</button>
+        <button
+          type="button"
+          class="btn-outline"
+          [disabled]="refreshing"
+          (click)="load(false)"
+          aria-label="Actualizar resultados oficiales"
+        >
+          <span class="refresh-icon" [class.spinning]="refreshing" aria-hidden="true">↻</span>
+          {{ refreshing ? 'Actualizando…' : 'Actualizar' }}
+        </button>
+      </div>
+
+      <div class="list-heading">
+        <div>
+          <h2 id="results-list-title">Resultados oficiales</h2>
+          <p>
+            {{ totalElements | number }} registro(s)
+            <span *ngIf="selectedElection">· {{ selectedElection.name }}</span>
+            <span *ngIf="generatedAt">· Actualizado {{ generatedAt | date:'short' }}</span>
+          </p>
+        </div>
+        <button type="button" class="btn-outline" [disabled]="!canManageSelectedElection" (click)="openSummaryModal()">
+          {{ summary ? 'Editar consolidado' : 'Crear consolidado' }}
+        </button>
+      </div>
+
+      <div class="table-wrapper" *ngIf="results.length; else emptyState">
+        <table class="admin-table results-table">
+          <caption class="sr-only">Listado paginado de resultados oficiales</caption>
+          <thead>
+            <tr>
+              <th scope="col">Candidato</th>
+              <th scope="col">Territorio</th>
+              <th scope="col" class="numeric-column">Votos</th>
+              <th scope="col" class="numeric-column">Porcentaje</th>
+              <th scope="col">Mesas</th>
+              <th scope="col">Participación</th>
+              <th scope="col">Trazabilidad</th>
+              <th scope="col">Validación</th>
+              <th scope="col" class="actions-heading">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let result of results; trackBy: trackByResult">
+              <td>
+                <div class="candidate-cell">
+                  <span
+                    class="party-dot"
+                    [style.background]="result.candidate.party?.color || 'var(--app-primary)'"
+                    aria-hidden="true"
+                  ></span>
+                  <div>
+                    <strong>{{ result.candidate.name }}</strong>
+                    <small>
+                      {{ result.candidate.party?.acronym || result.candidate.party?.name || 'Sin partido' }}
+                      · #{{ result.id }}
+                    </small>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <div class="territory-cell">
+                  <span>{{ result.municipality || 'Nacional' }}</span>
+                  <small>{{ result.department || 'Cobertura nacional' }}</small>
+                </div>
+              </td>
+              <td class="numeric-column td-bold">{{ result.votes | number }}</td>
+              <td class="numeric-column">{{ result.percentage | number:'1.0-2' }}%</td>
+              <td>
+                <span class="tables-value">
+                  {{ result.reportedTables | number }}/{{ result.totalTables | number }}
+                </span>
+                <small>
+                  {{ result.totalTables ? (result.reportedTables * 100 / result.totalTables | number:'1.0-1') : 0 }}%
+                </small>
+              </td>
+              <td>{{ result.participation | number:'1.0-2' }}%</td>
+              <td>
+                <div class="trace-cell">
+                  <strong>{{ result.source }}</strong>
+                  <small>{{ result.importedAt | date:'short' }}</small>
+                </div>
+              </td>
+              <td>
+                <span [class]="statusClass(result.validationStatus)">
+                  {{ statusLabel(result.validationStatus) }}
+                </span>
+                <small
+                  *ngIf="result.validationMessage"
+                  class="validation-detail"
+                  [title]="result.validationMessage"
+                >
+                  {{ result.validationMessage }}
+                </small>
+              </td>
+              <td class="td-actions">
+                <button
+                  type="button"
+                  class="icon-btn edit"
+                  (click)="openModal(result)"
+                  [disabled]="!canManageSelectedElection"
+                  [attr.aria-label]="'Editar resultado de ' + result.candidate.name"
+                  title="Editar resultado"
+                >
+                  ✎
+                </button>
+                <button
+                  type="button"
+                  class="icon-btn del"
+                  [disabled]="!canManageSelectedElection || deletingId === result.id"
+                  (click)="deleteResult(result)"
+                  [attr.aria-label]="'Eliminar resultado de ' + result.candidate.name"
+                  title="Eliminar resultado"
+                >
+                  {{ deletingId === result.id ? '…' : '⌫' }}
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <ng-template #emptyState>
+        <div class="empty-state">
+          <div class="empty-icon" aria-hidden="true">▤</div>
+          <h3>No hay resultados para mostrar</h3>
+          <p>
+            Cambia los filtros, importa un CSV o registra el primer resultado de la elección.
+          </p>
+          <button type="button" class="btn-primary" [disabled]="!canManageSelectedElection" (click)="openModal()">Nuevo resultado</button>
+        </div>
+      </ng-template>
+
+      <footer class="pagination" *ngIf="totalElements > 0">
+        <label>
+          Filas por página
+          <select [(ngModel)]="pageSize" (ngModelChange)="changePageSize()">
+            <option [ngValue]="10">10</option>
+            <option [ngValue]="20">20</option>
+            <option [ngValue]="50">50</option>
+            <option [ngValue]="100">100</option>
+          </select>
+        </label>
+        <span>Página {{ page + 1 }} de {{ totalPages || 1 }}</span>
+        <div class="pagination-actions">
+          <button type="button" (click)="previousPage()" [disabled]="page === 0" aria-label="Página anterior">‹</button>
+          <button type="button" (click)="nextPage()" [disabled]="page + 1 >= totalPages" aria-label="Página siguiente">›</button>
+        </div>
+      </footer>
+    </section>
+
+    <div class="two-col detail-grid">
+      <section class="card summary-card" aria-labelledby="summary-title">
+        <div class="detail-card-header">
+          <div>
+            <h3 id="summary-title">Consolidado de la elección</h3>
+            <p>Datos generales persistidos para la elección seleccionada.</p>
+          </div>
+          <button type="button" class="btn-outline compact-button" [disabled]="!canManageSelectedElection" (click)="openSummaryModal()">
+            {{ summary ? 'Editar' : 'Configurar' }}
+          </button>
+        </div>
+
+        <ng-container *ngIf="summary; else missingSummary">
+          <dl class="summary-grid">
+            <div><dt>Potencial electoral</dt><dd>{{ summary.eligibleVoters | number }}</dd></div>
+            <div><dt>Total de sufragantes</dt><dd>{{ summary.totalVoters | number }}</dd></div>
+            <div><dt>Votos válidos</dt><dd>{{ summary.validVotes | number }}</dd></div>
+            <div><dt>Votos en blanco</dt><dd>{{ summary.blankVotes | number }}</dd></div>
+            <div><dt>Votos nulos</dt><dd>{{ summary.nullVotes | number }}</dd></div>
+            <div><dt>No marcados</dt><dd>{{ summary.unmarkedVotes | number }}</dd></div>
+            <div><dt>Participación</dt><dd>{{ summary.participation | number:'1.0-2' }}%</dd></div>
+            <div><dt>Origen</dt><dd>{{ summary.source }}</dd></div>
+          </dl>
+        </ng-container>
+
+        <ng-template #missingSummary>
+          <div class="inline-empty-state">
+            <strong>No existe un consolidado para esta elección.</strong>
+            <p>Registra potencial electoral, sufragantes y desglose de votos para validar la conciliación.</p>
+          </div>
+        </ng-template>
+      </section>
+
+      <section class="card reconciliation-card" aria-labelledby="reconciliation-title">
+        <div class="detail-card-header">
+          <div>
+            <h3 id="reconciliation-title">Conciliación y calidad</h3>
+            <p>Comparación reproducible entre el consolidado y los resultados por candidato.</p>
+          </div>
+          <span
+            class="reconciliation-icon"
+            [class.is-ok]="counters.reconciled"
+            [class.is-warning]="!counters.reconciled"
+            aria-hidden="true"
+          >
+            {{ counters.reconciled ? '✓' : '!' }}
+          </span>
+        </div>
+
+        <p class="reconciliation-message">{{ reconciliationText() }}</p>
+        <div class="quality-list">
+          <div>
+            <span>Resultados validados</span>
+            <strong>{{ counters.validated | number }}</strong>
+          </div>
+          <div>
+            <span>Pendientes</span>
+            <strong>{{ counters.pending | number }}</strong>
+          </div>
+          <div>
+            <span>Rechazados</span>
+            <strong>{{ counters.rejected | number }}</strong>
+          </div>
+          <div>
+            <span>Diferencia de votos</span>
+            <strong>{{ counters.reconciliationDifference | number }}</strong>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <section class="card bulk-options" aria-labelledby="bulk-title">
+      <div class="list-heading">
+        <div>
+          <h3 id="bulk-title">Opciones de gestión</h3>
+          <p>Todas las opciones ejecutan una acción real sobre el módulo.</p>
+        </div>
+      </div>
+      <div class="carga-grid">
+        <button type="button" class="carga-card action-card" [disabled]="!canManageSelectedElection" (click)="openModal()">
+          <span class="carga-icon icon-blue" aria-hidden="true">＋</span>
+          <span class="carga-title">Carga manual</span>
+          <span class="carga-sub">Registra o corrige un resultado territorial.</span>
+        </button>
+
+        <label class="carga-card action-card file-card" [class.is-disabled]="importing || !canManageSelectedElection">
+          <span class="carga-icon icon-green" aria-hidden="true">↑</span>
+          <span class="carga-title">Importación CSV</span>
+          <span class="carga-sub">Crea y actualiza resultados mediante una plantilla validada.</span>
+          <input
+            type="file"
+            accept=".csv,text/csv"
+            [disabled]="importing || !canManageSelectedElection"
+            (change)="importCsv($event)"
+            aria-label="Seleccionar CSV de resultados"
+          />
+        </label>
+
+        <a class="carga-card action-card" routerLink="/admin/reportes">
+          <span class="carga-icon icon-purple" aria-hidden="true">↓</span>
+          <span class="carga-title">Exportar consolidado</span>
+          <span class="carga-sub">Genera archivos desde el módulo de reportes.</span>
+        </a>
+      </div>
+    </section>
+  </ng-container>
+
+  <ng-template #initialLoading>
+    <div class="loading-state" role="status" aria-live="polite">
+      <span class="loading-spinner" aria-hidden="true"></span>
+      <strong>Cargando resultados oficiales…</strong>
+      <p>Consultando registros, consolidado y trazabilidad.</p>
+    </div>
+  </ng-template>
+</div>
+
+<div class="modal-overlay" *ngIf="modalOpen" (click)="closeModal()">
+  <section
+    class="modal result-modal"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="result-modal-title"
+    (click)="$event.stopPropagation()"
+  >
+    <div class="modal-header">
+      <div>
+        <h3 id="result-modal-title">{{ editMode ? 'Editar resultado oficial' : 'Nuevo resultado oficial' }}</h3>
+        <p>{{ selectedElection?.name || 'Elección seleccionada' }}</p>
+      </div>
+      <button type="button" class="modal-close" (click)="closeModal()" aria-label="Cerrar">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <p *ngIf="modalError" class="alert-error" role="alert">{{ modalError }}</p>
+
+      <div class="form-grid">
+        <label class="form-group full-width">
+          <span>Candidato <b aria-hidden="true">*</b></span>
+          <select #firstField [(ngModel)]="form.candidateId" [disabled]="editMode" required>
+            <option [ngValue]="null">Seleccionar candidato…</option>
+            <option *ngFor="let candidate of formCandidates" [ngValue]="candidate.id">
+              {{ candidate.name }} · {{ candidate.party?.acronym || candidate.party?.name }}
+            </option>
+          </select>
+          <small *ngIf="editMode">El candidato no puede cambiarse al editar el registro.</small>
+        </label>
+
+        <label class="form-group">
+          <span>Departamento</span>
+          <input [(ngModel)]="form.department" maxlength="120" placeholder="Ej. Antioquia" />
+        </label>
+
+        <label class="form-group">
+          <span>Municipio</span>
+          <input [(ngModel)]="form.municipality" maxlength="120" placeholder="Nombre del municipio" />
+        </label>
+
+        <label class="form-group">
+          <span>Votos <b aria-hidden="true">*</b></span>
+          <input type="number" min="0" step="1" [(ngModel)]="form.votes" required />
+        </label>
+
+        <label class="form-group">
+          <span>Participación (%) <b aria-hidden="true">*</b></span>
+          <input type="number" min="0" max="100" step="0.01" [(ngModel)]="form.participation" required />
+        </label>
+
+        <label class="form-group">
+          <span>Mesas reportadas <b aria-hidden="true">*</b></span>
+          <input type="number" min="0" step="1" [(ngModel)]="form.reportedTables" required />
+        </label>
+
+        <label class="form-group">
+          <span>Total de mesas <b aria-hidden="true">*</b></span>
+          <input type="number" min="0" step="1" [(ngModel)]="form.totalTables" required />
+        </label>
+
+        <label class="form-group full-width">
+          <span>Origen</span>
+          <input [(ngModel)]="form.source" maxlength="160" placeholder="Origen de la carga (opcional)" />
+          <small>El porcentaje del candidato se recalcula automáticamente en el backend.</small>
+        </label>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button type="button" class="btn-outline" [disabled]="saving" (click)="closeModal()">Cancelar</button>
+      <button type="button" class="btn-primary" [disabled]="saving" (click)="save()">
+        {{ saving ? 'Guardando…' : (editMode ? 'Guardar cambios' : 'Registrar resultado') }}
+      </button>
+    </div>
+  </section>
+</div>
+
+<div class="modal-overlay" *ngIf="summaryModalOpen" (click)="closeSummaryModal()">
+  <section
+    class="modal summary-modal"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="summary-modal-title"
+    (click)="$event.stopPropagation()"
+  >
+    <div class="modal-header">
+      <div>
+        <h3 id="summary-modal-title">Consolidado electoral</h3>
+        <p>{{ selectedElection?.name || 'Elección seleccionada' }}</p>
+      </div>
+      <button type="button" class="modal-close" (click)="closeSummaryModal()" aria-label="Cerrar">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <p *ngIf="summaryError" class="alert-error" role="alert">{{ summaryError }}</p>
+
+      <div class="form-grid">
+        <label class="form-group">
+          <span>Potencial electoral</span>
+          <input #summaryFirstField type="number" min="0" step="1" [(ngModel)]="summaryForm.eligibleVoters" />
+        </label>
+        <label class="form-group">
+          <span>Total de sufragantes</span>
+          <input type="number" min="0" step="1" [(ngModel)]="summaryForm.totalVoters" />
+        </label>
+        <label class="form-group">
+          <span>Votos válidos</span>
+          <input type="number" min="0" step="1" [(ngModel)]="summaryForm.validVotes" />
+        </label>
+        <label class="form-group">
+          <span>Votos en blanco</span>
+          <input type="number" min="0" step="1" [(ngModel)]="summaryForm.blankVotes" />
+        </label>
+        <label class="form-group">
+          <span>Votos nulos</span>
+          <input type="number" min="0" step="1" [(ngModel)]="summaryForm.nullVotes" />
+        </label>
+        <label class="form-group">
+          <span>Tarjetas no marcadas</span>
+          <input type="number" min="0" step="1" [(ngModel)]="summaryForm.unmarkedVotes" />
+        </label>
+        <label class="form-group">
+          <span>Mesas reportadas</span>
+          <input type="number" min="0" step="1" [(ngModel)]="summaryForm.reportedTables" />
+        </label>
+        <label class="form-group">
+          <span>Total de mesas</span>
+          <input type="number" min="0" step="1" [(ngModel)]="summaryForm.totalTables" />
+        </label>
+        <label class="form-group">
+          <span>Origen</span>
+          <input [(ngModel)]="summaryForm.source" maxlength="160" />
+        </label>
+        <label class="form-group">
+          <span>Fecha de corte</span>
+          <input type="datetime-local" [(ngModel)]="summaryForm.importedAt" />
+        </label>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button type="button" class="btn-outline" [disabled]="savingSummary" (click)="closeSummaryModal()">Cancelar</button>
+      <button type="button" class="btn-primary" [disabled]="savingSummary" (click)="saveSummary()">
+        {{ savingSummary ? 'Guardando…' : 'Guardar consolidado' }}
+      </button>
+    </div>
+  </section>
+</div>
