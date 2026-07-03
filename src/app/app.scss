@@ -18,26 +18,18 @@
 
 .mobile-app-promo__content {
   width: min(1180px, calc(100% - 48px));
+  min-height: 76px;
   margin: 0 auto;
-  padding: 16px 0;
+  padding: 12px min(350px, 29vw) 12px 0;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 18px;
-}
-
-.mobile-app-promo__main-link {
-  min-width: 0;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 16px;
-  padding: 6px;
-  margin: -6px;
-  border-radius: 16px;
+  border-radius: 18px;
   color: inherit;
   text-decoration: none;
-  transition: background .18s ease, transform .18s ease;
+  cursor: pointer;
+  transition: background .18s ease, transform .18s ease, box-shadow .18s ease;
 
   &:hover {
     background: color-mix(in srgb, var(--app-primary) 7%, transparent);
@@ -66,7 +58,6 @@
   border-radius: 16px;
   background: var(--app-primary-muted);
   color: var(--app-primary-text);
-  cursor: pointer;
   transition: transform .18s ease, background .18s ease, color .18s ease, box-shadow .18s ease;
 }
 
@@ -115,33 +106,18 @@
   }
 }
 
-.mobile-app-promo__download {
-  min-height: 46px;
+.mobile-app-promo__cta {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 0 20px;
-  border-radius: 12px;
-  background: var(--app-primary);
-  color: var(--app-on-primary);
-  text-decoration: none;
+  gap: 7px;
+  padding: 8px 11px;
+  border: 1px solid color-mix(in srgb, var(--app-primary) 22%, var(--app-border));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--app-primary) 9%, var(--app-surface));
+  color: var(--app-primary-text);
   white-space: nowrap;
-  font-size: 0.84375rem;
+  font-size: .75rem;
   font-weight: 800;
-  box-shadow: 0 10px 24px color-mix(in srgb, var(--app-primary) 24%, transparent);
-  transition: transform .18s ease, background .18s ease, box-shadow .18s ease;
-
-  &:hover {
-    background: var(--app-primary-hover);
-    transform: translateY(-1px);
-    box-shadow: 0 14px 30px color-mix(in srgb, var(--app-primary) 30%, transparent);
-  }
-
-  &:focus-visible {
-    outline: 3px solid var(--app-focus-ring);
-    outline-offset: 3px;
-  }
 }
 
 .accessibility-toolbar {
@@ -158,11 +134,6 @@
   background: color-mix(in srgb, var(--app-surface) 94%, transparent);
   box-shadow: 0 14px 36px var(--app-shadow);
   backdrop-filter: blur(16px);
-}
-
-/* En escritorio web la barra queda por encima del footer promocional y nunca tapa la descarga. */
-:host-context(.web-platform) .accessibility-toolbar {
-  bottom: calc(var(--desktop-promo-height, 92px) + 18px + env(safe-area-inset-bottom));
 }
 
 .accessibility-button,
@@ -208,10 +179,57 @@
   bottom: max(10px, env(safe-area-inset-bottom));
 }
 
-@media (max-width: 900px) {
-  .mobile-app-promo { display: none; }
+@media (min-width: 901px) and (max-width: 1180px) {
+  .mobile-app-promo__content {
+    width: min(100% - 32px, 1080px);
+    padding-right: min(330px, 31vw);
+  }
 
-  :host-context(.web-platform) .accessibility-toolbar,
+  .mobile-app-promo__copy > span {
+    display: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .mobile-app-promo {
+    min-height: 0;
+  }
+
+  .mobile-app-promo__content {
+    width: 100%;
+    min-height: 108px;
+    margin: 0;
+    padding: 14px 14px calc(68px + env(safe-area-inset-bottom));
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 12px;
+    border-radius: 0;
+  }
+
+  .mobile-app-promo__icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+  }
+
+  .mobile-app-promo__copy strong {
+    font-size: .875rem;
+  }
+
+  .mobile-app-promo__copy > span {
+    display: none;
+  }
+
+  .mobile-app-promo__copy small {
+    font-size: .72rem;
+  }
+
+  .mobile-app-promo__cta {
+    grid-column: 2;
+    justify-self: start;
+    padding: 6px 9px;
+    font-size: .7rem;
+  }
+
   .accessibility-toolbar {
     right: max(8px, env(safe-area-inset-right));
     bottom: max(8px, env(safe-area-inset-bottom));
@@ -233,13 +251,13 @@
   .compact { padding: 0; }
 }
 
-@media (min-width: 901px) and (max-width: 1100px) {
+@media (max-width: 420px) {
   .mobile-app-promo__content {
-    width: min(100% - 32px, 980px);
+    padding-inline: 12px;
   }
 
-  .mobile-app-promo__copy > span {
-    display: none;
+  .mobile-app-promo__copy strong {
+    line-height: 1.25;
   }
 }
 

@@ -10,8 +10,10 @@
 
 <div class="card">
   <div class="card-header"><h3>Resultados Oficiales ({{ resultadosFiltrados.length }})</h3><div class="header-actions"><button class="btn-outline" (click)="descargar('pdf')">PDF</button><button class="btn-outline" (click)="descargar('json')">JSON</button></div></div>
-  <table class="analista-table">
+  <div class="table-scroll" tabindex="0" role="region" aria-label="Tabla de resultados; desliza horizontalmente para ver más columnas">
+    <table class="analista-table">
     <thead><tr><th>ID</th><th>Elección</th><th>Candidato</th><th>Departamento</th><th>Municipio</th><th>Votos</th><th>Porcentaje</th><th>Mesas</th><th>Participación</th></tr></thead>
     <tbody><tr *ngFor="let r of resultadosFiltrados"><td class="td-bold">#{{ r.id }}</td><td>{{ r.election.name || '-' }}</td><td>{{ r.candidate.name || '-' }}</td><td>{{ r.department }}</td><td>{{ r.municipality }}</td><td class="td-bold">{{ r.votes | number }}</td><td>{{ r.percentage }}%</td><td>{{ r.reportedTables }}/{{ r.totalTables }}</td><td>{{ r.participation }}%</td></tr></tbody>
-  </table>
+    </table>
+  </div>
 </div>

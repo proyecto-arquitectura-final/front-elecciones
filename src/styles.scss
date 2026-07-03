@@ -3914,11 +3914,23 @@ video {
   touch-action: manipulation;
 }
 
-:is(.table-wrap, .table-wrapper, .table-container, .responsive-table, .results-table-wrapper, .usuarios-table-wrapper) {
+:is(.table-wrap, .table-wrapper, .table-scroll, .table-container, .responsive-table, .results-table-wrapper, .usuarios-table-wrapper) {
+  display: block;
+  width: 100%;
   max-width: 100%;
+  min-width: 0;
   overflow-x: auto;
+  overflow-y: hidden;
   overscroll-behavior-inline: contain;
   -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y;
+  scrollbar-gutter: stable;
+}
+
+:is(.table-wrap, .table-wrapper, .table-scroll, .table-container, .responsive-table, .results-table-wrapper, .usuarios-table-wrapper):focus-visible {
+  outline: 3px solid var(--app-focus-ring);
+  outline-offset: 3px;
+  border-radius: 10px;
 }
 
 :is(table, .data-table, .results-table) {
@@ -3974,8 +3986,27 @@ video {
     overflow-y: auto;
   }
 
-  :is(table, .data-table, .results-table) {
+  :is(.admin-table, .analista-table, .elections-table, .data-table, .results-table, .territory-table) {
+    width: max(100%, 720px);
     min-width: 720px;
+  }
+
+  :is(.table-wrap, .table-wrapper, .table-scroll, .table-container, .responsive-table, .results-table-wrapper, .usuarios-table-wrapper) {
+    margin-inline: -4px;
+    padding-inline: 4px;
+    padding-bottom: 8px;
+  }
+
+  :is(.table-wrap, .table-wrapper, .table-scroll, .table-container, .responsive-table, .results-table-wrapper, .usuarios-table-wrapper)::after {
+    content: 'Desliza horizontalmente para ver más columnas';
+    position: sticky;
+    left: 4px;
+    display: block;
+    width: max-content;
+    margin-top: 7px;
+    color: var(--app-text-subtle);
+    font-size: .68rem;
+    font-weight: 650;
   }
 
   :is(.chart-container, .chart-wrapper, .chart-area, canvas) {

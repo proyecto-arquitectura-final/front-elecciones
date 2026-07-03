@@ -26,9 +26,10 @@ describe('App', () => {
     const promo = fixture.nativeElement.querySelector('.mobile-app-promo');
     expect(promo).toBeTruthy();
     const downloadLinks = promo.querySelectorAll('a[download="sistema-electoral.apk"]');
-    expect(downloadLinks.length).toBe(2);
+    expect(downloadLinks.length).toBe(1);
     expect(downloadLinks[0]?.getAttribute('href')).toBe('/downloads/sistema-electoral.apk');
-    expect(downloadLinks[1]?.getAttribute('href')).toBe('/downloads/sistema-electoral.apk');
+    expect(downloadLinks[0]?.classList.contains('mobile-app-promo__content')).toBe(true);
     expect(promo.querySelector('.mobile-app-promo__icon')).toBeTruthy();
+    expect(promo.querySelector('.mobile-app-promo__download')).toBeFalsy();
   });
 });

@@ -22,16 +22,18 @@
   </div>
 
   <div class="table-title">Lista de Encuestas ({{ encuestasFiltradas.length }})</div>
-  <table class="analista-table">
-    <thead><tr><th>ID</th><th>Fuente</th><th>Fecha</th><th>Tamaño Muestra</th><th>Margen Error</th><th>Metodología</th><th>Resultados</th><th>Estado</th></tr></thead>
+  <div class="table-scroll" tabindex="0" role="region" aria-label="Tabla de encuestas; desliza horizontalmente para ver más columnas">
+    <table class="analista-table">
+      <thead><tr><th>ID</th><th>Fuente</th><th>Fecha</th><th>Tamaño Muestra</th><th>Margen Error</th><th>Metodología</th><th>Resultados</th><th>Estado</th></tr></thead>
     <tbody>
       <tr *ngFor="let e of encuestasFiltradas">
         <td class="td-id">#{{ e.id }}</td><td class="td-bold">{{ e.source }}</td><td>{{ e.date }}</td>
         <td><span class="badge-muestra">{{ e.sampleSize | number }}</span></td><td>±{{ e.marginError }}%</td><td>{{ e.methodology }}</td><td>{{ e.results.length }}</td>
         <td><span [ngClass]="e.status === 'APROBADA' ? 'badge-aprobado' : (e.status === 'RECHAZADA' ? 'badge-rechazado' : 'badge-pendiente')">{{ estado(e) }}</span></td>
       </tr>
-    </tbody>
-  </table>
+      </tbody>
+    </table>
+  </div>
 </div>
 
 <div class="two-col">

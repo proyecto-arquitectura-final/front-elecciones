@@ -50,8 +50,9 @@
   </div>
 
   <div class="table-title">Lista de Candidatos ({{ candidatosFiltrados.length }})</div>
-  <table class="analista-table">
-    <thead>
+  <div class="table-scroll" tabindex="0" role="region" aria-label="Tabla de candidatos; desliza horizontalmente para ver más columnas">
+    <table class="analista-table">
+      <thead>
       <tr>
         <th>ID</th><th>Nombre</th><th>Partido</th><th>Tipo de Elección</th>
         <th>Territorio</th><th>Votos Actuales</th><th>Estado</th>
@@ -67,8 +68,9 @@
         <td class="td-bold">{{ c.votos | number }}</td>
         <td><span [ngClass]="c.activo ? 'badge-activo' : 'badge-inactivo'">{{ c.activo ? 'Activo' : 'Inactivo' }}</span></td>
       </tr>
-    </tbody>
-  </table>
+      </tbody>
+    </table>
+  </div>
 </div>
 
 <div class="card">

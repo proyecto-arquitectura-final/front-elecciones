@@ -24,8 +24,9 @@
       <input type="text" placeholder="Buscar partido..." [(ngModel)]="busqueda" />
     </div>
   </div>
-  <table class="analista-table">
-    <thead>
+  <div class="table-scroll" tabindex="0" role="region" aria-label="Tabla de partidos; desliza horizontalmente para ver más columnas">
+    <table class="analista-table">
+      <thead>
       <tr>
         <th>Partido</th><th>Sigla</th><th>Color</th><th>Fundación</th>
         <th>Candidatos</th><th>Estado</th>
@@ -43,6 +44,7 @@
         <td><span class="badge-cand">{{ p.candidatos }} candidatos</span></td>
         <td><span [ngClass]="p.activo ? 'badge-activo' : 'badge-inactivo'">{{ p.activo ? 'Activo' : 'Inactivo' }}</span></td>
       </tr>
-    </tbody>
-  </table>
+      </tbody>
+    </table>
+  </div>
 </div>
