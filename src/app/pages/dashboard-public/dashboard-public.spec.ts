@@ -130,6 +130,11 @@ describe('DashboardPublic', () => {
     expect(text).toContain('Consolidado consistente');
     expect(text).toContain('Predicciones');
     expect(text).toContain('Asistente');
+
+    const responsiveTables = fixture.nativeElement.querySelectorAll('table[data-responsive="cards"]');
+    expect(responsiveTables.length).toBe(2);
+    expect(responsiveTables[0].querySelector('td[data-label="Candidato"]')).toBeTruthy();
+    expect(responsiveTables[1].querySelector('td[data-label="Territorio"]')).toBeTruthy();
   });
 
   it('refreshes the selected election without clearing the current screen', async () => {

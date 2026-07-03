@@ -27,14 +27,14 @@
 <div class="card">
   <div class="card-header"><div><h3>Resultados por Región</h3><p class="card-sub">Regiones con mayor volumen de votos cargados</p></div><a routerLink="/analista/resultados" class="ver-todas">Ver resultados ↗</a></div>
   <div class="table-scroll" tabindex="0" role="region" aria-label="Tabla de resultados por región; desliza horizontalmente para ver más columnas">
-    <table class="analista-table"><thead><tr><th>Región</th><th>Votos</th><th>Líder</th><th>Peso relativo</th></tr></thead><tbody><tr *ngFor="let r of regionData"><td class="td-bold">{{ r.ciudad }}</td><td>{{ r.votos | number }}</td><td>{{ r.lider }}</td><td><div class="dist-bar-track"><div class="dist-bar-fill" [style.width]="r.pct + '%' "></div></div></td></tr></tbody></table>
+    <table class="analista-table" data-responsive="cards"><thead><tr><th>Región</th><th>Votos</th><th>Líder</th><th>Peso relativo</th></tr></thead><tbody><tr *ngFor="let r of regionData"><td class="td-bold" data-label="Región">{{ r.ciudad }}</td><td data-label="Votos">{{ r.votos | number }}</td><td data-label="Líder">{{ r.lider }}</td><td data-label="Peso relativo"><div class="dist-bar-track"><div class="dist-bar-fill" [style.width]="r.pct + '%' "></div></div></td></tr></tbody></table>
   </div>
 </div>
 
 <div class="card">
   <div class="card-header"><div><h3>Encuestas Recientes</h3><p class="card-sub">Seguimiento de calidad y validación</p></div><a routerLink="/analista/encuestas" class="ver-todas">Ver todas ↗</a></div>
   <div class="table-scroll" tabindex="0" role="region" aria-label="Tabla de encuestas recientes; desliza horizontalmente para ver más columnas">
-    <table class="analista-table"><thead><tr><th>Firma Encuestadora</th><th>Fecha</th><th>Muestra</th><th>Margen Error</th><th>Confianza estimada</th><th>Estado</th></tr></thead><tbody><tr *ngFor="let e of encuestasRecientes"><td class="td-bold">{{ e.firma }}</td><td>{{ e.fecha }}</td><td>{{ e.muestra | number }}</td><td>{{ e.margen }}</td><td>{{ e.confianza }}%</td><td><span [ngClass]="e.estado === 'Validada' ? 'badge-validada' : 'badge-revision'">{{ e.estado === 'Validada' ? '✔' : '⏱' }} {{ e.estado }}</span></td></tr></tbody></table>
+    <table class="analista-table" data-responsive="cards"><thead><tr><th>Firma Encuestadora</th><th>Fecha</th><th>Muestra</th><th>Margen Error</th><th>Confianza estimada</th><th>Estado</th></tr></thead><tbody><tr *ngFor="let e of encuestasRecientes"><td class="td-bold" data-label="Firma encuestadora">{{ e.firma }}</td><td data-label="Fecha">{{ e.fecha }}</td><td data-label="Muestra">{{ e.muestra | number }}</td><td data-label="Margen de error">{{ e.margen }}</td><td data-label="Confianza estimada">{{ e.confianza }}%</td><td data-label="Estado"><span [ngClass]="e.estado === 'Validada' ? 'badge-validada' : 'badge-revision'">{{ e.estado === 'Validada' ? '✔' : '⏱' }} {{ e.estado }}</span></td></tr></tbody></table>
   </div>
 </div>
 

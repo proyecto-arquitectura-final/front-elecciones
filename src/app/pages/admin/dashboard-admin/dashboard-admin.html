@@ -76,7 +76,7 @@
         </div>
 
         <div class="table-scroll" tabindex="0" aria-label="Elecciones activas">
-          <table class="admin-table">
+          <table class="admin-table" data-responsive="cards">
             <thead>
               <tr>
                 <th>Elección</th>
@@ -89,15 +89,15 @@
             </thead>
             <tbody>
               <tr *ngFor="let election of elecciones; trackBy: trackById">
-                <td>
+                <td data-label="Elección">
                   <strong>{{ election.name }}</strong>
                   <span class="table-secondary" *ngIf="election.summaryAvailable">
                     {{ election.reportedTables | number }} de {{ election.totalTables | number }} mesas
                   </span>
                 </td>
-                <td><span class="tag">{{ tipoEleccion(election.type) }}</span></td>
-                <td>{{ formatDate(election.date) }}</td>
-                <td>
+                <td data-label="Tipo"><span class="tag">{{ tipoEleccion(election.type) }}</span></td>
+                <td data-label="Fecha">{{ formatDate(election.date) }}</td>
+                <td data-label="Progreso">
                   <div class="progress-cell" *ngIf="election.progress !== null; else sinResumen">
                     <div
                       class="progress-track"
@@ -114,13 +114,13 @@
                     <span class="pending-summary">Sin resumen</span>
                   </ng-template>
                 </td>
-                <td>
+                <td data-label="Estado">
                   <span class="state-badge" [ngClass]="estadoEleccionClass(election.state)">
                     <span class="state-dot" aria-hidden="true"></span>
                     {{ estadoEleccion(election.state) }}
                   </span>
                 </td>
-                <td class="td-actions">
+                <td class="td-actions" data-label="Acciones">
                   <a class="icon-btn" routerLink="/admin/elecciones" title="Gestionar elecciones" aria-label="Gestionar elecciones">↗</a>
                 </td>
               </tr>

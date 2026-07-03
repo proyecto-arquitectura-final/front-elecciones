@@ -147,25 +147,25 @@
         <span class="record-count">{{ data.summary.resultRecords | number }} registros fuente</span>
       </div>
       <div class="table-wrap">
-        <table class="data-table">
+        <table class="data-table" data-responsive="cards">
           <thead>
             <tr><th>#</th><th>Candidato</th><th>Partido</th><th>Votos</th><th>Porcentaje</th><th>Brecha</th></tr>
           </thead>
           <tbody>
             <tr *ngFor="let candidate of candidatos; let i = index">
-              <td><span class="rank-badge">{{ candidate.rank }}</span></td>
-              <td>
+              <td data-label="Posición"><span class="rank-badge">{{ candidate.rank }}</span></td>
+              <td data-label="Candidato">
                 <div class="candidate-cell"><span class="candidate-dot" [style.background]="candidateColor(candidate, i)"></span><strong>{{ candidate.candidate }}</strong></div>
               </td>
-              <td><span class="party-name">{{ candidate.party }}</span></td>
-              <td class="numeric">{{ candidate.votes | number }}</td>
-              <td>
+              <td data-label="Partido"><span class="party-name">{{ candidate.party }}</span></td>
+              <td class="numeric" data-label="Votos">{{ candidate.votes | number }}</td>
+              <td data-label="Porcentaje">
                 <div class="percent-cell">
                   <strong>{{ candidate.percentage | number:'1.0-1' }}%</strong>
                   <div class="mini-progress"><span [style.background]="candidateColor(candidate, i)" [style.width.%]="candidate.percentage"></span></div>
                 </div>
               </td>
-              <td class="numeric">
+              <td class="numeric" data-label="Brecha">
                 <span *ngIf="candidate.rank === 1" class="leader-tag">Líder</span>
                 <span *ngIf="candidate.rank !== 1">-{{ candidate.gapVotes | number }} ({{ candidate.gapPercentage | number:'1.0-1' }} pp)</span>
               </td>
@@ -227,16 +227,16 @@
     </div>
 
     <div class="table-wrap">
-      <table class="data-table territory-table">
+      <table class="data-table territory-table" data-responsive="cards">
         <thead><tr><th>Territorio</th><th>Mesas</th><th>Procesado</th><th>Participación</th><th>Votos candidatos</th><th>Líder</th></tr></thead>
         <tbody>
           <tr *ngFor="let territory of territoriosPagina">
-            <td><div class="territory-name"><span>📍</span><strong>{{ territory.level === 'MUNICIPIO' ? territory.municipality : territory.department }}</strong><small *ngIf="territory.level === 'MUNICIPIO'">{{ territory.department }}</small></div></td>
-            <td class="numeric">{{ territory.reportedTables | number }} / {{ territory.totalTables | number }}</td>
-            <td><div class="percent-cell"><strong>{{ territory.processedPercentage | number:'1.0-1' }}%</strong><div class="mini-progress"><span [style.width.%]="territory.processedPercentage"></span></div></div></td>
-            <td class="numeric">{{ territory.participation | number:'1.0-1' }}%</td>
-            <td class="numeric">{{ territory.votes | number }}</td>
-            <td><span class="territory-leader">{{ territory.leader }}</span></td>
+            <td data-label="Territorio"><div class="territory-name"><span>📍</span><strong>{{ territory.level === 'MUNICIPIO' ? territory.municipality : territory.department }}</strong><small *ngIf="territory.level === 'MUNICIPIO'">{{ territory.department }}</small></div></td>
+            <td class="numeric" data-label="Mesas">{{ territory.reportedTables | number }} / {{ territory.totalTables | number }}</td>
+            <td data-label="Procesado"><div class="percent-cell"><strong>{{ territory.processedPercentage | number:'1.0-1' }}%</strong><div class="mini-progress"><span [style.width.%]="territory.processedPercentage"></span></div></div></td>
+            <td class="numeric" data-label="Participación">{{ territory.participation | number:'1.0-1' }}%</td>
+            <td class="numeric" data-label="Votos candidatos">{{ territory.votes | number }}</td>
+            <td data-label="Líder"><span class="territory-leader">{{ territory.leader }}</span></td>
           </tr>
           <tr *ngIf="!territoriosPagina.length"><td colspan="6" class="empty-state">No hay territorios que coincidan con el filtro.</td></tr>
         </tbody>

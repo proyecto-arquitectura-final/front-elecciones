@@ -344,3 +344,74 @@ input[type='search']:focus { border-color: #2563eb; box-shadow: 0 0 0 4px rgba(3
   .donut-layout { flex-direction: column; }
   .legend { width: 100%; }
 }
+
+/* Phone/WebView layout: cards and charts must never widen the page. */
+.results-grid,
+.ranking-card,
+.chart-stack,
+.chart-card,
+.territory-card,
+.table-wrap,
+.donut-layout,
+.legend {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.chart-card {
+  overflow: hidden;
+}
+
+@media (max-width: 760px) {
+  .main-content {
+    width: min(100% - 20px, 1540px);
+    overflow-x: clip;
+  }
+
+  .ranking-card,
+  .chart-card,
+  .territory-card {
+    padding: 18px;
+  }
+
+  .section-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .record-count {
+    white-space: normal;
+  }
+
+  .donut-layout {
+    width: 100%;
+    flex-direction: column;
+    gap: 18px;
+    overflow: hidden;
+  }
+
+  .donut,
+  .donut--small {
+    width: min(168px, 62vw);
+    height: auto;
+    aspect-ratio: 1;
+    margin-inline: auto;
+  }
+
+  .donut-hole strong {
+    font-size: .875rem;
+  }
+
+  .legend {
+    width: 100%;
+  }
+
+  .legend-row strong {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .data-footer {
+    padding-bottom: 76px;
+  }
+}

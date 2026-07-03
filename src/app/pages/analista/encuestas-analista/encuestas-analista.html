@@ -23,13 +23,13 @@
 
   <div class="table-title">Lista de Encuestas ({{ encuestasFiltradas.length }})</div>
   <div class="table-scroll" tabindex="0" role="region" aria-label="Tabla de encuestas; desliza horizontalmente para ver más columnas">
-    <table class="analista-table">
+    <table class="analista-table" data-responsive="cards">
       <thead><tr><th>ID</th><th>Fuente</th><th>Fecha</th><th>Tamaño Muestra</th><th>Margen Error</th><th>Metodología</th><th>Resultados</th><th>Estado</th></tr></thead>
     <tbody>
       <tr *ngFor="let e of encuestasFiltradas">
-        <td class="td-id">#{{ e.id }}</td><td class="td-bold">{{ e.source }}</td><td>{{ e.date }}</td>
-        <td><span class="badge-muestra">{{ e.sampleSize | number }}</span></td><td>±{{ e.marginError }}%</td><td>{{ e.methodology }}</td><td>{{ e.results.length }}</td>
-        <td><span [ngClass]="e.status === 'APROBADA' ? 'badge-aprobado' : (e.status === 'RECHAZADA' ? 'badge-rechazado' : 'badge-pendiente')">{{ estado(e) }}</span></td>
+        <td class="td-id" data-label="ID">#{{ e.id }}</td><td class="td-bold" data-label="Fuente">{{ e.source }}</td><td data-label="Fecha">{{ e.date }}</td>
+        <td data-label="Tamaño de muestra"><span class="badge-muestra">{{ e.sampleSize | number }}</span></td><td data-label="Margen de error">±{{ e.marginError }}%</td><td data-label="Metodología">{{ e.methodology }}</td><td data-label="Resultados">{{ e.results.length }}</td>
+        <td data-label="Estado"><span [ngClass]="e.status === 'APROBADA' ? 'badge-aprobado' : (e.status === 'RECHAZADA' ? 'badge-rechazado' : 'badge-pendiente')">{{ estado(e) }}</span></td>
       </tr>
       </tbody>
     </table>

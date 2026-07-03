@@ -202,15 +202,15 @@
       </div>
 
       <div class="table-wrap" *ngIf="data.polls.length; else noPolls">
-        <table>
+        <table data-responsive="cards">
           <thead><tr><th>Fuente</th><th>Fecha</th><th>Muestra</th><th>Margen</th><th>Metodología</th></tr></thead>
           <tbody>
             <tr *ngFor="let poll of data.polls">
-              <td><strong>{{ poll.source || 'Sin fuente' }}</strong></td>
-              <td>{{ poll.date || 'Sin fecha' }}</td>
-              <td>{{ poll.sampleSize | number }}</td>
-              <td>±{{ poll.marginError | number:'1.0-1' }}%</td>
-              <td>{{ poll.methodology || 'No registrada' }}</td>
+              <td data-label="Fuente"><strong>{{ poll.source || 'Sin fuente' }}</strong></td>
+              <td data-label="Fecha">{{ poll.date || 'Sin fecha' }}</td>
+              <td data-label="Muestra">{{ poll.sampleSize | number }}</td>
+              <td data-label="Margen">±{{ poll.marginError | number:'1.0-1' }}%</td>
+              <td data-label="Metodología">{{ poll.methodology || 'No registrada' }}</td>
             </tr>
           </tbody>
         </table>

@@ -25,7 +25,7 @@
     </div>
   </div>
   <div class="table-scroll" tabindex="0" role="region" aria-label="Tabla de partidos; desliza horizontalmente para ver más columnas">
-    <table class="analista-table">
+    <table class="analista-table" data-responsive="cards">
       <thead>
       <tr>
         <th>Partido</th><th>Sigla</th><th>Color</th><th>Fundación</th>
@@ -34,15 +34,15 @@
     </thead>
     <tbody>
       <tr *ngFor="let p of partidosFiltrados">
-        <td class="td-partido"><span>⚑</span> {{ p.nombre }}</td>
-        <td class="td-sigla">{{ p.sigla }}</td>
-        <td class="td-color">
+        <td class="td-partido" data-label="Partido"><span>⚑</span> {{ p.nombre }}</td>
+        <td class="td-sigla" data-label="Sigla">{{ p.sigla }}</td>
+        <td class="td-color" data-label="Color">
           <div class="color-dot" [style.background]="p.color"></div>
           <span>{{ p.color }}</span>
         </td>
-        <td>{{ p.fundacion }}</td>
-        <td><span class="badge-cand">{{ p.candidatos }} candidatos</span></td>
-        <td><span [ngClass]="p.activo ? 'badge-activo' : 'badge-inactivo'">{{ p.activo ? 'Activo' : 'Inactivo' }}</span></td>
+        <td data-label="Fundación">{{ p.fundacion }}</td>
+        <td data-label="Candidatos"><span class="badge-cand">{{ p.candidatos }} candidatos</span></td>
+        <td data-label="Estado"><span [ngClass]="p.activo ? 'badge-activo' : 'badge-inactivo'">{{ p.activo ? 'Activo' : 'Inactivo' }}</span></td>
       </tr>
       </tbody>
     </table>

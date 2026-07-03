@@ -54,15 +54,15 @@
   </div>
 
   <div class="table-wrap" *ngIf="regions.length > 0">
-    <table class="admin-table">
+    <table class="admin-table" data-responsive="cards">
       <thead><tr><th>Región</th><th>Votos</th><th>Participación</th><th>Mesas</th><th>Procesado</th></tr></thead>
       <tbody>
         <tr *ngFor="let region of regions; trackBy: trackByRegion">
-          <td class="bold">{{ region.region }}</td>
-          <td>{{ region.votes | number }}</td>
-          <td>{{ region.participation | number: '1.1-1' }}%</td>
-          <td>{{ region.reportedTables | number }} / {{ region.totalTables | number }}</td>
-          <td><span class="progress-badge">{{ region.processedPercentage | number: '1.1-1' }}%</span></td>
+          <td class="bold" data-label="Región">{{ region.region }}</td>
+          <td data-label="Votos">{{ region.votes | number }}</td>
+          <td data-label="Participación">{{ region.participation | number: '1.1-1' }}%</td>
+          <td data-label="Mesas">{{ region.reportedTables | number }} / {{ region.totalTables | number }}</td>
+          <td data-label="Procesado"><span class="progress-badge">{{ region.processedPercentage | number: '1.1-1' }}%</span></td>
         </tr>
       </tbody>
     </table>

@@ -48,7 +48,7 @@
   </div>
 
   <div class="table-wrapper" *ngIf="!cargando && partidosFiltrados.length">
-    <table class="admin-table">
+    <table class="admin-table" data-responsive="cards">
       <thead>
         <tr>
           <th>Partido</th>
@@ -62,27 +62,27 @@
       </thead>
       <tbody>
         <tr *ngFor="let party of partidosFiltrados">
-          <td class="td-partido">
+          <td class="td-partido" data-label="Partido">
             <span class="party-mark" [style.background]="party.color" aria-hidden="true"></span>
             <span>{{ party.nombre }}</span>
           </td>
-          <td class="td-sigla">{{ party.sigla }}</td>
-          <td class="td-color">
+          <td class="td-sigla" data-label="Sigla">{{ party.sigla }}</td>
+          <td class="td-color" data-label="Color">
             <div class="color-dot" [style.background]="party.color" aria-hidden="true"></div>
             <span>{{ party.color }}</span>
           </td>
-          <td>{{ party.fundacion }}</td>
-          <td>
+          <td data-label="Fundación">{{ party.fundacion }}</td>
+          <td data-label="Candidatos">
             <span class="badge-cand" [class.badge-cand--empty]="party.candidatos === 0">
               {{ textoCandidatos(party.candidatos) }}
             </span>
           </td>
-          <td>
+          <td data-label="Estado">
             <span [ngClass]="party.activo ? 'badge-activo' : 'badge-inactivo'">
               {{ party.activo ? 'Activo' : 'Inactivo' }}
             </span>
           </td>
-          <td class="td-actions">
+          <td class="td-actions" data-label="Acciones">
             <button
               class="icon-btn edit"
               type="button"

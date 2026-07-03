@@ -51,7 +51,7 @@
 
   <div class="table-title">Lista de Candidatos ({{ candidatosFiltrados.length }})</div>
   <div class="table-scroll" tabindex="0" role="region" aria-label="Tabla de candidatos; desliza horizontalmente para ver más columnas">
-    <table class="analista-table">
+    <table class="analista-table" data-responsive="cards">
       <thead>
       <tr>
         <th>ID</th><th>Nombre</th><th>Partido</th><th>Tipo de Elección</th>
@@ -60,13 +60,13 @@
     </thead>
     <tbody>
       <tr *ngFor="let c of candidatosFiltrados">
-        <td class="td-id">{{ c.id }}</td>
-        <td class="td-bold">{{ c.nombre }}</td>
-        <td><span class="tag-partido" [style.border-color]="c.partidoColor" [style.color]="c.partidoColor">{{ c.partido }}</span></td>
-        <td><span class="tag-tipo" [ngClass]="c.tipoClass">{{ c.tipo }}</span></td>
-        <td>{{ c.territorio }}</td>
-        <td class="td-bold">{{ c.votos | number }}</td>
-        <td><span [ngClass]="c.activo ? 'badge-activo' : 'badge-inactivo'">{{ c.activo ? 'Activo' : 'Inactivo' }}</span></td>
+        <td class="td-id" data-label="ID">{{ c.id }}</td>
+        <td class="td-bold" data-label="Nombre">{{ c.nombre }}</td>
+        <td data-label="Partido"><span class="tag-partido" [style.border-color]="c.partidoColor" [style.color]="c.partidoColor">{{ c.partido }}</span></td>
+        <td data-label="Tipo de elección"><span class="tag-tipo" [ngClass]="c.tipoClass">{{ c.tipo }}</span></td>
+        <td data-label="Territorio">{{ c.territorio }}</td>
+        <td class="td-bold" data-label="Votos actuales">{{ c.votos | number }}</td>
+        <td data-label="Estado"><span [ngClass]="c.activo ? 'badge-activo' : 'badge-inactivo'">{{ c.activo ? 'Activo' : 'Inactivo' }}</span></td>
       </tr>
       </tbody>
     </table>

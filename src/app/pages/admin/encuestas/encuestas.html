@@ -139,7 +139,7 @@
       </div>
 
       <div class="table-wrapper" *ngIf="polls.length; else emptyState">
-        <table class="admin-table poll-table">
+        <table class="admin-table poll-table" data-responsive="cards">
           <caption class="sr-only">Listado paginado de encuestas electorales</caption>
           <thead>
             <tr>
@@ -162,29 +162,29 @@
               (click)="selectPoll(poll)"
               (keydown.enter)="selectPoll(poll)"
             >
-              <td>
+              <td data-label="Fuente">
                 <div class="source-cell">
                   <strong>{{ poll.source }}</strong>
                   <span>#{{ poll.id }}</span>
                 </div>
               </td>
-              <td>
+              <td data-label="Elección">
                 <div class="election-cell">
                   <span>{{ poll.election.name }}</span>
                   <small>{{ poll.election.type }} · {{ poll.election.round }}</small>
                 </div>
               </td>
-              <td>{{ poll.date | date:'yyyy-MM-dd':'UTC' }}</td>
-              <td><span class="badge-muestra">{{ poll.sampleSize | number }}</span></td>
-              <td>±{{ poll.marginError }}%</td>
-              <td>
+              <td data-label="Fecha">{{ poll.date | date:'yyyy-MM-dd':'UTC' }}</td>
+              <td data-label="Muestra"><span class="badge-muestra">{{ poll.sampleSize | number }}</span></td>
+              <td data-label="Margen">±{{ poll.marginError }}%</td>
+              <td data-label="Resultados">
                 <span class="result-count">{{ poll.results.length }}</span>
                 <small>{{ poll.totalPercentage }}%</small>
               </td>
-              <td>
+              <td data-label="Estado">
                 <span [class]="statusClass(poll.status)">{{ statusLabel(poll.status) }}</span>
               </td>
-              <td class="td-actions" (click)="$event.stopPropagation()">
+              <td class="td-actions" (click)="$event.stopPropagation()" data-label="Acciones">
                 <button
                   type="button"
                   class="icon-btn edit"

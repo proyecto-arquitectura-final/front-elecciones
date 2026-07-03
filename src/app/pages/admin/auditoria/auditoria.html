@@ -79,7 +79,7 @@
   </div>
 
   <div class="table-wrap" *ngIf="events.length > 0">
-    <table class="admin-table">
+    <table class="admin-table" data-responsive="cards">
       <thead>
         <tr>
           <th>Fecha y hora</th>
@@ -93,16 +93,16 @@
       </thead>
       <tbody>
         <tr *ngFor="let event of events; trackBy: trackById">
-          <td class="nowrap">{{ event.at | date: 'dd/MM/yyyy, h:mm a' }}</td>
-          <td>{{ event.username }}</td>
-          <td><span class="action-badge" [ngClass]="actionClass(event.action)">{{ event.action }}</span></td>
-          <td>
+          <td class="nowrap" data-label="Fecha y hora">{{ event.at | date: 'dd/MM/yyyy, h:mm a' }}</td>
+          <td data-label="Usuario">{{ event.username }}</td>
+          <td data-label="Acción"><span class="action-badge" [ngClass]="actionClass(event.action)">{{ event.action }}</span></td>
+          <td data-label="Entidad">
             <span>{{ event.entity }}</span>
             <small *ngIf="event.entityId">#{{ event.entityId }}</small>
           </td>
-          <td class="detail-cell">{{ event.details }}</td>
-          <td class="ip-cell">{{ event.ip }}</td>
-          <td>
+          <td class="detail-cell" data-label="Detalle">{{ event.details }}</td>
+          <td class="ip-cell" data-label="IP">{{ event.ip }}</td>
+          <td data-label="Resultado">
             <span class="status-badge" [class.success]="event.success" [class.failed]="!event.success">
               {{ event.success ? 'Exitoso' : 'Fallido' }}
             </span>

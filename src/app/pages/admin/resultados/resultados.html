@@ -192,7 +192,7 @@
       </div>
 
       <div class="table-wrapper" *ngIf="results.length; else emptyState">
-        <table class="admin-table results-table">
+        <table class="admin-table results-table" data-responsive="cards">
           <caption class="sr-only">Listado paginado de resultados oficiales</caption>
           <thead>
             <tr>
@@ -209,7 +209,7 @@
           </thead>
           <tbody>
             <tr *ngFor="let result of results; trackBy: trackByResult">
-              <td>
+              <td data-label="Candidato">
                 <div class="candidate-cell">
                   <span
                     class="party-dot"
@@ -225,15 +225,15 @@
                   </div>
                 </div>
               </td>
-              <td>
+              <td data-label="Territorio">
                 <div class="territory-cell">
                   <span>{{ result.municipality || 'Nacional' }}</span>
                   <small>{{ result.department || 'Cobertura nacional' }}</small>
                 </div>
               </td>
-              <td class="numeric-column td-bold">{{ result.votes | number }}</td>
-              <td class="numeric-column">{{ result.percentage | number:'1.0-2' }}%</td>
-              <td>
+              <td class="numeric-column td-bold" data-label="Votos">{{ result.votes | number }}</td>
+              <td class="numeric-column" data-label="Porcentaje">{{ result.percentage | number:'1.0-2' }}%</td>
+              <td data-label="Mesas">
                 <span class="tables-value">
                   {{ result.reportedTables | number }}/{{ result.totalTables | number }}
                 </span>
@@ -241,14 +241,14 @@
                   {{ result.totalTables ? (result.reportedTables * 100 / result.totalTables | number:'1.0-1') : 0 }}%
                 </small>
               </td>
-              <td>{{ result.participation | number:'1.0-2' }}%</td>
-              <td>
+              <td data-label="Participación">{{ result.participation | number:'1.0-2' }}%</td>
+              <td data-label="Trazabilidad">
                 <div class="trace-cell">
                   <strong>{{ result.source }}</strong>
                   <small>{{ result.importedAt | date:'short' }}</small>
                 </div>
               </td>
-              <td>
+              <td data-label="Validación">
                 <span [class]="statusClass(result.validationStatus)">
                   {{ statusLabel(result.validationStatus) }}
                 </span>
@@ -260,7 +260,7 @@
                   {{ result.validationMessage }}
                 </small>
               </td>
-              <td class="td-actions">
+              <td class="td-actions" data-label="Acciones">
                 <button
                   type="button"
                   class="icon-btn edit"
