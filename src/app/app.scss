@@ -1,16 +1,153 @@
 :host {
   display: block;
-  min-height: 100vh;
+  min-height: 100dvh;
 }
 
 .app-viewport {
-  min-height: 100vh;
+  min-height: calc(100dvh - var(--desktop-promo-height, 0px));
+}
+
+.mobile-app-promo {
+  min-height: var(--desktop-promo-height, 92px);
+  display: flex;
+  align-items: center;
+  border-top: 1px solid var(--app-border);
+  background: linear-gradient(135deg, var(--app-surface) 0%, var(--app-primary-soft) 100%);
+  color: var(--app-text);
+}
+
+.mobile-app-promo__content {
+  width: min(1180px, calc(100% - 48px));
+  margin: 0 auto;
+  padding: 16px 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+}
+
+.mobile-app-promo__main-link {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+  padding: 6px;
+  margin: -6px;
+  border-radius: 16px;
+  color: inherit;
+  text-decoration: none;
+  transition: background .18s ease, transform .18s ease;
+
+  &:hover {
+    background: color-mix(in srgb, var(--app-primary) 7%, transparent);
+  }
+
+  &:hover .mobile-app-promo__icon {
+    transform: translateY(-2px) scale(1.03);
+    background: var(--app-primary);
+    color: var(--app-on-primary);
+    box-shadow: 0 12px 28px color-mix(in srgb, var(--app-primary) 28%, transparent);
+  }
+
+  &:focus-visible {
+    outline: 3px solid var(--app-focus-ring);
+    outline-offset: 4px;
+  }
+}
+
+.mobile-app-promo__icon {
+  position: relative;
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--app-primary) 22%, var(--app-border));
+  border-radius: 16px;
+  background: var(--app-primary-muted);
+  color: var(--app-primary-text);
+  cursor: pointer;
+  transition: transform .18s ease, background .18s ease, color .18s ease, box-shadow .18s ease;
+}
+
+.mobile-app-promo__phone {
+  font-size: 1.55rem;
+  line-height: 1;
+}
+
+.mobile-app-promo__icon-badge {
+  position: absolute;
+  right: -5px;
+  bottom: -5px;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--app-surface);
+  border-radius: 999px;
+  background: var(--app-primary);
+  color: var(--app-on-primary);
+  font-size: .75rem;
+  font-weight: 900;
+  box-shadow: 0 5px 12px color-mix(in srgb, var(--app-primary) 30%, transparent);
+}
+
+.mobile-app-promo__copy {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+
+  strong {
+    color: var(--app-text);
+    font-size: 0.9375rem;
+  }
+
+  > span {
+    color: var(--app-text-muted);
+    font-size: 0.8125rem;
+    line-height: 1.45;
+  }
+
+  small {
+    color: var(--app-primary-text);
+    font-size: .72rem;
+    font-weight: 700;
+  }
+}
+
+.mobile-app-promo__download {
+  min-height: 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 20px;
+  border-radius: 12px;
+  background: var(--app-primary);
+  color: var(--app-on-primary);
+  text-decoration: none;
+  white-space: nowrap;
+  font-size: 0.84375rem;
+  font-weight: 800;
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--app-primary) 24%, transparent);
+  transition: transform .18s ease, background .18s ease, box-shadow .18s ease;
+
+  &:hover {
+    background: var(--app-primary-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 14px 30px color-mix(in srgb, var(--app-primary) 30%, transparent);
+  }
+
+  &:focus-visible {
+    outline: 3px solid var(--app-focus-ring);
+    outline-offset: 3px;
+  }
 }
 
 .accessibility-toolbar {
   position: fixed;
-  right: 18px;
-  bottom: 18px;
+  right: max(18px, env(safe-area-inset-right));
+  bottom: max(18px, env(safe-area-inset-bottom));
   z-index: 10000;
   display: flex;
   align-items: center;
@@ -21,6 +158,11 @@
   background: color-mix(in srgb, var(--app-surface) 94%, transparent);
   box-shadow: 0 14px 36px var(--app-shadow);
   backdrop-filter: blur(16px);
+}
+
+/* En escritorio web la barra queda por encima del footer promocional y nunca tapa la descarga. */
+:host-context(.web-platform) .accessibility-toolbar {
+  bottom: calc(var(--desktop-promo-height, 92px) + 18px + env(safe-area-inset-bottom));
 }
 
 .accessibility-button,
@@ -55,49 +197,53 @@
   outline-offset: 2px;
 }
 
-.accessibility-button:disabled {
-  opacity: .38;
-  cursor: not-allowed;
+.accessibility-button:disabled { opacity: .38; cursor: not-allowed; }
+.theme-button { padding: 0 10px; }
+.compact { padding: 0 8px; }
+.font-size-indicator { min-width: 48px; padding: 0 7px; color: var(--app-text-muted); font-variant-numeric: tabular-nums; }
+.toolbar-divider { width: 1px; height: 24px; background: var(--app-border); }
+
+:host-context(.native-platform) .accessibility-toolbar {
+  right: max(10px, env(safe-area-inset-right));
+  bottom: max(10px, env(safe-area-inset-bottom));
 }
 
-.theme-button {
-  padding: 0 10px;
-}
+@media (max-width: 900px) {
+  .mobile-app-promo { display: none; }
 
-.compact {
-  padding: 0 8px;
-}
-
-.font-size-indicator {
-  min-width: 48px;
-  padding: 0 7px;
-  color: var(--app-text-muted);
-  font-variant-numeric: tabular-nums;
-}
-
-.toolbar-divider {
-  width: 1px;
-  height: 24px;
-  background: var(--app-border);
-}
-
-@media (max-width: 640px) {
+  :host-context(.web-platform) .accessibility-toolbar,
   .accessibility-toolbar {
-    right: 10px;
-    bottom: 10px;
+    right: max(8px, env(safe-area-inset-right));
+    bottom: max(8px, env(safe-area-inset-bottom));
+    padding: 5px;
+    border-radius: 14px;
   }
 
-  .control-label {
+  .control-label,
+  .toolbar-divider,
+  .font-size-indicator { display: none; }
+
+  .accessibility-button {
+    width: 42px;
+    min-width: 42px;
+    height: 42px;
+  }
+
+  .theme-button,
+  .compact { padding: 0; }
+}
+
+@media (min-width: 901px) and (max-width: 1100px) {
+  .mobile-app-promo__content {
+    width: min(100% - 32px, 980px);
+  }
+
+  .mobile-app-promo__copy > span {
     display: none;
-  }
-
-  .theme-button {
-    padding: 0 8px;
   }
 }
 
 @media print {
-  .accessibility-toolbar {
-    display: none !important;
-  }
+  .accessibility-toolbar,
+  .mobile-app-promo { display: none !important; }
 }

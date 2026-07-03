@@ -51,7 +51,7 @@ export class Login {
           this.error = true;
           this.mensajeError =
             err?.status === 0
-              ? 'No se pudo conectar con el backend. Verifica que Spring Boot esté corriendo en el puerto 8080.'
+              ? 'No fue posible conectarse al servicio. Revisa tu conexión e inténtalo nuevamente.'
               : 'Credenciales inválidas o usuario sin permiso.';
           console.error('Error login:', err);
         },

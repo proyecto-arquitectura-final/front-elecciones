@@ -2,6 +2,37 @@
   <router-outlet></router-outlet>
 </div>
 
+@if (!platform.isNative()) {
+  <footer class="mobile-app-promo" aria-label="Aplicación móvil">
+    <div class="mobile-app-promo__content">
+      <a
+        class="mobile-app-promo__main-link"
+        [href]="apkDownloadUrl"
+        download="sistema-electoral.apk"
+        aria-label="Descargar la aplicación móvil para Android">
+        <span class="mobile-app-promo__icon" aria-hidden="true">
+          <span class="mobile-app-promo__phone">📱</span>
+          <span class="mobile-app-promo__icon-badge">↓</span>
+        </span>
+        <span class="mobile-app-promo__copy">
+          <strong>Lleva el Sistema Electoral en tu Android</strong>
+          <span>Consulta la plataforma desde el celular con una experiencia adaptada a pantallas táctiles.</span>
+          <small>También puedes descargarla haciendo clic en el ícono del celular.</small>
+        </span>
+      </a>
+
+      <a
+        class="mobile-app-promo__download"
+        [href]="apkDownloadUrl"
+        download="sistema-electoral.apk"
+        aria-label="Descargar aplicación móvil para Android">
+        <span aria-hidden="true">↓</span>
+        Descargar APK
+      </a>
+    </div>
+  </footer>
+}
+
 <aside class="accessibility-toolbar" aria-label="Preferencias de visualización">
   <button
     type="button"

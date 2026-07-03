@@ -15,6 +15,14 @@
         reverse_proxy backend:8080
     }
 
+    # APK instalable para el banner de escritorio.
+    @androidApk path /downloads/*.apk
+    header @androidApk {
+        Content-Type application/vnd.android.package-archive
+        Content-Disposition "attachment; filename=sistema-electoral.apk"
+        Cache-Control "no-cache, no-store, must-revalidate"
+    }
+
     # Angular SPA: cualquier ruta que no sea un archivo vuelve a index.html.
     handle {
         root * /srv

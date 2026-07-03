@@ -73,3 +73,6 @@ desktop.ini
 
 # Archivos locales
 *.local
+# Capacitor generated mobile environment
+src/environments/environment.mobile.generated.ts
+/android/local.properties

@@ -22,4 +22,12 @@ describe('AnalistaLayout', () => {
   it('should create', () => {
     expect(component).toBeTruthy();
   });
+
+  it('debe abrir y cerrar el menú móvil', () => {
+    expect(component.menuOpen).toBe(false);
+    component.toggleMenu();
+    expect(component.menuOpen).toBe(true);
+    component.closeMenu();
+    expect(component.menuOpen).toBe(false);
+  });
 });

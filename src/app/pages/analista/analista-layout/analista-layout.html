@@ -1,71 +1,44 @@
 <div class="analista-wrapper">
+  <header class="mobile-topbar">
+    <button type="button" class="menu-toggle" aria-label="Abrir menú de análisis" [attr.aria-expanded]="menuOpen" aria-controls="analista-sidebar" (click)="toggleMenu()">☰</button>
+    <div class="mobile-brand"><span class="mobile-brand-icon">📊</span><span>Panel Analista</span></div>
+  </header>
 
-  <!-- SIDEBAR -->
-  <aside class="sidebar">
+  @if (menuOpen) {
+    <button type="button" class="sidebar-backdrop" aria-label="Cerrar menú" (click)="closeMenu()"></button>
+  }
 
+  <aside id="analista-sidebar" class="sidebar" [class.open]="menuOpen">
     <div class="sidebar-brand">
       <div class="brand-icon">📊</div>
-      <div>
-        <div class="brand-title">Panel Analista</div>
-        <div class="brand-sub">Sistema Electoral</div>
-      </div>
+      <div><div class="brand-title">Panel Analista</div><div class="brand-sub">Sistema Electoral</div></div>
+      <button type="button" class="sidebar-close" aria-label="Cerrar menú" (click)="closeMenu()">×</button>
     </div>
 
     <div class="user-card">
-      <div class="user-avatar">M</div>
-      <div>
-        <div class="user-name">{{ nombreUsuario }}</div>
-        <div class="user-role">Analista Electoral</div>
-      </div>
+      <div class="user-avatar">{{ inicialUsuario }}</div>
+      <div><div class="user-name">{{ nombreUsuario }}</div><div class="user-role">Analista Electoral</div></div>
     </div>
 
-    <nav class="sidebar-nav">
-      <a routerLink="/analista/dashboard" routerLinkActive="active" class="nav-item">
-        <span class="nav-icon">⊞</span> Dashboard
-      </a>
-
+    <nav class="sidebar-nav" aria-label="Navegación de análisis">
+      <a routerLink="/analista/dashboard" routerLinkActive="active" class="nav-item" (click)="closeMenu()"><span class="nav-icon">⊞</span> Dashboard</a>
       <div class="nav-section">DATOS</div>
-      <a routerLink="/analista/candidatos" routerLinkActive="active" class="nav-item">
-        <span class="nav-icon">👤</span> Candidatos
-      </a>
-      <a routerLink="/analista/partidos" routerLinkActive="active" class="nav-item">
-        <span class="nav-icon">⚑</span> Partidos
-      </a>
-      <a routerLink="/analista/encuestas" routerLinkActive="active" class="nav-item">
-        <span class="nav-icon">📋</span> Encuestas
-      </a>
-
+      <a routerLink="/analista/candidatos" routerLinkActive="active" class="nav-item" (click)="closeMenu()"><span class="nav-icon">👤</span> Candidatos</a>
+      <a routerLink="/analista/partidos" routerLinkActive="active" class="nav-item" (click)="closeMenu()"><span class="nav-icon">⚑</span> Partidos</a>
+      <a routerLink="/analista/encuestas" routerLinkActive="active" class="nav-item" (click)="closeMenu()"><span class="nav-icon">📋</span> Encuestas</a>
       <div class="nav-section">ANÁLISIS</div>
-      <a routerLink="/analista/resultados" routerLinkActive="active" class="nav-item">
-        <span class="nav-icon">📈</span> Resultados
-      </a>
-      <a routerLink="/analista/predicciones" routerLinkActive="active" class="nav-item">
-        <span class="nav-icon">🔮</span> Predicciones
-      </a>
-      <a routerLink="/analista/reportes" routerLinkActive="active" class="nav-item">
-        <span class="nav-icon">📄</span> Reportes
-      </a>
-      <a routerLink="/analista/asistente" routerLinkActive="active" class="nav-item">
-        <span class="nav-icon">💬</span> Asistente IA
-      </a>
-
+      <a routerLink="/analista/resultados" routerLinkActive="active" class="nav-item" (click)="closeMenu()"><span class="nav-icon">📈</span> Resultados</a>
+      <a routerLink="/analista/predicciones" routerLinkActive="active" class="nav-item" (click)="closeMenu()"><span class="nav-icon">🔮</span> Predicciones</a>
+      <a routerLink="/analista/reportes" routerLinkActive="active" class="nav-item" (click)="closeMenu()"><span class="nav-icon">📄</span> Reportes</a>
+      <a routerLink="/analista/asistente" routerLinkActive="active" class="nav-item" (click)="closeMenu()"><span class="nav-icon">💬</span> Asistente IA</a>
       <div class="nav-section">HERRAMIENTAS</div>
-      <a routerLink="/analista/estadisticas" routerLinkActive="active" class="nav-item">
-        <span class="nav-icon">📊</span> Estadísticas
-      </a>
+      <a routerLink="/analista/estadisticas" routerLinkActive="active" class="nav-item" (click)="closeMenu()"><span class="nav-icon">📊</span> Estadísticas</a>
     </nav>
 
     <div class="sidebar-footer">
-      <a class="nav-item logout" (click)="logout()">
-        <span class="nav-icon">→</span> Cerrar Sesión
-      </a>
+      <button type="button" class="nav-item logout" (click)="logout()"><span class="nav-icon">→</span> Cerrar Sesión</button>
     </div>
-
   </aside>
 
-  <!-- MAIN -->
-  <main class="analista-main">
-    <router-outlet />
-  </main>
-
+  <main class="analista-main" (click)="closeMenu()"><router-outlet /></main>
 </div>
